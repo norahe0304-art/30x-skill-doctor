@@ -5,4 +5,4 @@
 [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"

@@ -163,10 +163,14 @@ _TR: dict[str, dict[str, str]] = {
         "zh": "可恢复：skill-doctor undo 一行还原以上所有变更。",
     },
     "rat_codex_warn": {
-        "en": "Note: Codex CLI < v1.0 may not load directory symlinks reliably "
-              "(github.com/openai/codex/issues/17344, /11314).",
-        "zh": "提示：Codex CLI < v1.0 在某些版本上加载目录软链不稳定 "
-              "(github.com/openai/codex/issues/17344, /11314).",
+        "en": "Note: Codex Desktop App skips SKILL.md when SKILL.md itself is "
+              "a symlink (#17344). Codex CLI ≤ 0.98 silently fails on broken "
+              "symlinks during skill discovery (#11314). Valid directory "
+              "symlinks (what we create) work in current Codex CLI; we still "
+              "flag this so you know.",
+        "zh": "提示：Codex 桌面 App 当 SKILL.md 本身是软链时会跳过 (#17344)；"
+              "Codex CLI ≤ 0.98 在遇到坏软链时静默失败 (#11314). 我们生成的是"
+              "目录级有效软链, 当前 Codex CLI 能识别, 仅此告知你这个生态局限。",
     },
     "rat_junk_pattern": {
         "en": "Pattern '{pattern}' matched — see methodology in skill-doctor README.",

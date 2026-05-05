@@ -1,6 +1,6 @@
 [project]
 name = "skill-doctor"
-version = "0.4.0"
+version = "0.4.1"
 description = "Cross-runtime AI agent skill housekeeping: spot duplicates, drift, broken symlinks, junk, and stale skills across Claude Code, Codex, Cursor, OpenClaw, and more."
 readme = "README.md"
 requires-python = ">=3.12"

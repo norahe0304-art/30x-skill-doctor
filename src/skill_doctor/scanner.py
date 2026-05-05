@@ -41,8 +41,11 @@ RUNTIME_ROOTS: tuple[tuple[Path, Runtime, str], ...] = (
 
 # Junk file detection (macOS / editor / iCloud copy artifacts).
 # NEVER include patterns that overlap with iCloud offload placeholders (`*.icloud`).
-# See anthropics/claude-code#32637 — a tool deleted real iCloud-offloaded files
-# thinking they were empty. We hard-exclude that suffix below.
+# See anthropics/claude-code#32637 — Claude Cowork (Anthropic's own desktop tool,
+# Research Preview) destroyed user files via `cp -a` + `rm -rf` on 0-byte iCloud
+# stubs. The thread's recommended fix is xattr-based detection of
+# `com.apple.icloud.itemDownloadRequested`; we use defense-in-depth and exclude
+# the *.icloud suffix + iCloud-managed parent directories outright.
 JUNK_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r" \d+\.md$"), "macos-copy"),
     (re.compile(r" \d+\.json$"), "macos-copy"),
@@ -53,13 +56,18 @@ JUNK_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^\.DS_Store$"), "ds-store"),
     (re.compile(r"^\._"), "apple-double"),
     (re.compile(r"^__MACOSX$"), "macosx-zip"),
-    # Vim swap regex per github/gitignore canonical Global/Vim.gitignore.
+    # Vim swap/undo regex copied verbatim from github/gitignore canonical
+    # Global/Vim.gitignore (commit on main, May 2026, repo has 173k stars).
+    # Five patterns cover .ext-suffixed swap files, two cover root-level
+    # swap files (no extension), one covers persistent undo, one covers
+    # tilde backups (also Emacs).
     (re.compile(r"^[._].*\.s[a-v][a-z]$"), "vim-swap"),
     (re.compile(r"^[._].*\.sw[a-p]$"), "vim-swap"),
-    (re.compile(r"\.swp$"), "vim-swap"),
-    (re.compile(r"\.swo$"), "vim-swap"),
+    (re.compile(r"^[._]s[a-rt-v][a-z]$"), "vim-swap"),
+    (re.compile(r"^[._]ss[a-gi-z]$"), "vim-swap"),
+    (re.compile(r"^[._]sw[a-p]$"), "vim-swap"),
+    (re.compile(r"^[._].*\.un~$"), "vim-undo"),
     (re.compile(r"~$"), "editor-backup"),
-    (re.compile(r"\.un~$"), "vim-undo"),
 )
 
 

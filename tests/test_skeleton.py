@@ -6,7 +6,7 @@ from __future__ import annotations
 def test_package_imports() -> None:
     import skill_doctor
 
-    assert skill_doctor.__version__ == "0.4.0"
+    assert skill_doctor.__version__ == "0.4.1"
 
 
 def test_cli_module_imports() -> None:

@@ -261,14 +261,22 @@ rather artefacts of the host filesystem, sync layer, or editor.
 
 **Detection.** Filename matches against a curated regex catalog:
 
-| Pattern                     | Source                                            |
-|-----------------------------|---------------------------------------------------|
-| `* \d+\.(md|json|py|...)`   | iCloud Drive filename-collision suffixing         |
-| `.DS_Store`                 | macOS Finder metadata (Apple Support HT204016)    |
-| `._*` (AppleDouble)         | macOS extended-attribute side-files               |
-| `*.swp`, `*.swo`            | Vim swap (`:help swap-file`)                      |
-| `*~`, `*.un~`               | Vim backup, undo                                  |
-| `__MACOSX/`                 | macOS-injected zip metadata directory             |
+| Pattern                                  | Source                                            |
+|------------------------------------------|---------------------------------------------------|
+| `* \d+\.(md\|json\|py\|...)`             | iCloud Drive filename-collision suffixing         |
+| `.DS_Store`                              | macOS Finder metadata                             |
+| `._*` (AppleDouble)                      | macOS extended-attribute side-files               |
+| `[._]*.s[a-v][a-z]`, `[._]*.sw[a-p]`     | Vim swap, per github/gitignore Global/Vim.gitignore (canonical, 173k stars) |
+| `[._]s[a-rt-v][a-z]`, `[._]ss[a-gi-z]`   | Vim swap (root-level), same source                |
+| `[._]*.un~`, `*~`                        | Vim persistent undo / Emacs backup                |
+| `__MACOSX/`                              | macOS-injected zip metadata directory             |
+
+Excluded outright (defense-in-depth against
+[anthropics/claude-code#32637](https://github.com/anthropics/claude-code/issues/32637),
+where another tool destroyed user data via `cp -a` + `rm -rf` on 0-byte
+iCloud-offloaded stubs):
+- File suffix `.icloud`
+- Any path under `~/Library/CloudStorage/` or `~/Library/Mobile Documents/`
 
 Scan is recursive across the entire skill directory tree (`Path.rglob`).
 

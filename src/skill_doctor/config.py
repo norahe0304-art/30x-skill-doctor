@@ -18,10 +18,15 @@ BACKUP_ROOT = CONFIG_DIR / "backup"
 QUALITY_CACHE_PATH = CONFIG_DIR / "quality_cache.json"
 
 DEFAULT_WEIGHTS = {
+    # Master-election weights. Path depth was dropped in v0.4.0 — searching the
+    # community turned up zero citations for "deeper path = canonical source".
+    # The opposite intuition (root-level = canonical, scoped = override) is
+    # implied by Claude Code's enterprise > personal > project precedence.
+    # Removing the unverified 15% and redistributing prevents a fake authority.
     "version": 0.40,
-    "incoming_links": 0.30,
-    "path_depth": 0.15,
-    "mtime_freshness": 0.15,
+    "incoming_links": 0.40,
+    "path_depth": 0.0,
+    "mtime_freshness": 0.20,
 }
 
 STALE_DAYS_DEFAULT = 90  # Skills with mtime older than this are flagged. mtime-only signal.

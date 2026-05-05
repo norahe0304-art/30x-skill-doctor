@@ -127,8 +127,8 @@ def _render_dup_list(report: AnalysisReport, c: Console, show_all: bool) -> None
         limit, len(report.duplicates),
         [
             "Detection: same dir_name + SHA-256(normalized SKILL.md body) match",
-            "Master election: version 40% · inbound symlinks 30% · "
-            "path depth 15% · mtime 15%",
+            "Master election: version 40% · inbound symlinks 40% · mtime 20% "
+            "(when no version present, weight redistributes to inbound + mtime)",
             "Provenance: NIST FIPS 180-4 (SHA-256) · git content-addressable model",
         ],
         c,

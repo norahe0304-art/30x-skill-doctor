@@ -62,7 +62,12 @@ def elect_master(
     all_instances: list[SkillInstance],
     weights: dict[str, float],
 ) -> SkillInstance:
-    """Score each instance and return the highest. Algorithm is documented in the README."""
+    """Score each instance and return the highest. Algorithm is documented in the README.
+
+    When no instance in a group declares a version, the version axis adds no
+    signal and its weight is *redistributed* to inbound + mtime so we don't
+    pretend a 40% lever is doing work it isn't.
+    """
     if len(group) == 1:
         return group[0]
 
@@ -72,20 +77,29 @@ def elect_master(
     mtimes = [inst.mtime for inst in group]
 
     semver_floats = [v[0] * 10000 + v[1] * 100 + v[2] for v in semvers]
+    has_any_version = any(v > 0 for v in semver_floats)
 
     n_semver = _normalize(semver_floats)
     n_incoming = _normalize(incoming)
     n_depth = _normalize(depths)
     n_mtime = _normalize(mtimes)
 
+    # Redistribute version weight to (inbound, mtime) when no instance has a version.
+    w = dict(weights)
+    if not has_any_version and w.get("version", 0):
+        share = w["version"] / 2.0
+        w["incoming_links"] = w.get("incoming_links", 0) + share
+        w["mtime_freshness"] = w.get("mtime_freshness", 0) + share
+        w["version"] = 0.0
+
     best_idx = 0
     best_score = float("-inf")
     for i, _inst in enumerate(group):
         score = (
-            n_semver[i] * weights["version"]
-            + n_incoming[i] * weights["incoming_links"]
-            + n_depth[i] * weights["path_depth"]
-            + n_mtime[i] * weights["mtime_freshness"]
+            n_semver[i] * w["version"]
+            + n_incoming[i] * w["incoming_links"]
+            + n_depth[i] * w.get("path_depth", 0)
+            + n_mtime[i] * w["mtime_freshness"]
         )
         if score > best_score:
             best_score = score

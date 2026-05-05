@@ -152,7 +152,7 @@ def _cache_status(paths: list) -> str:
     return "hit" if covered > len(paths) * 0.8 else "miss"
 
 
-def _clean_impl(yes: bool) -> None:
+def _clean_impl(yes: bool, master_runtime: str | None) -> None:
     if yes:
         typer.echo(t("yes_warn"))
         typer.echo(t("yes_countdown"))
@@ -164,7 +164,7 @@ def _clean_impl(yes: bool) -> None:
             raise typer.Exit() from None
     instances, junk, broken = scan_all()
     report = analyze(instances, junk, broken)
-    apply_actions(report, interactive=not yes)
+    apply_actions(report, interactive=not yes, force_master_runtime=master_runtime)
 
 
 @app.command("clean")
@@ -173,17 +173,26 @@ def clean_command(
         False, "--yes", "-y",
         help="Non-interactive: run every queued action (still backed up).",
     ),
+    master: str | None = typer.Option(
+        None, "--master",
+        help=(
+            "Designate this runtime as master in every duplicate group "
+            "(e.g. --master openclaw). Falls back to elected master where the "
+            "runtime isn't present."
+        ),
+    ),
 ) -> None:
     """Walk through every fix interactively (y/N/q/a). Backed up + undoable."""
-    _clean_impl(yes)
+    _clean_impl(yes, master)
 
 
 @app.command("apply", hidden=True)
 def apply_command(
     yes: bool = typer.Option(False, "--yes", "-y"),
+    master: str | None = typer.Option(None, "--master"),
 ) -> None:
     """Renamed to `clean`. Kept as a hidden alias for muscle memory."""
-    _clean_impl(yes)
+    _clean_impl(yes, master)
 
 
 @app.command("undo")

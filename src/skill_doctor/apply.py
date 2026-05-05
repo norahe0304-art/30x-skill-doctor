@@ -43,15 +43,39 @@ class _Plan:
     actions: list[Action] = field(default_factory=list)
     _next_id: int = 0
 
-    def add(self, action_type: ActionType, title: str, detail: str, ops: list[FsOp]) -> None:
+    def add(
+        self,
+        action_type: ActionType,
+        title: str,
+        detail: str,
+        ops: list[FsOp],
+        rationale: list[str] | None = None,
+    ) -> None:
         self._next_id += 1
-        self.actions.append(Action(self._next_id, action_type, title, detail, ops))
+        self.actions.append(
+            Action(
+                id=self._next_id,
+                type=action_type,
+                title=title,
+                detail=detail,
+                ops=ops,
+                rationale=rationale or [],
+            )
+        )
 
 
-def build_actions(report: AnalysisReport) -> list[Action]:
-    """Translate analysis findings into reversible action plans."""
+def build_actions(
+    report: AnalysisReport, force_master_runtime: str | None = None
+) -> list[Action]:
+    """Translate analysis findings into reversible action plans.
+
+    `force_master_runtime`: when set, override smart election and prefer that
+    runtime as master in every duplicate group (skillshare-style "designate
+    the source"). Falls back to elected master if the requested runtime is
+    not present in the group.
+    """
     plan = _Plan()
-    _plan_dedup(report, plan)
+    _plan_dedup(report, plan, force_master_runtime)
     _plan_junk(report, plan)
     _plan_broken(report, plan)
     return plan.actions
@@ -63,11 +87,23 @@ def _short(p: Path) -> str:
     return s.replace(home, "~", 1) if s.startswith(home) else s
 
 
-def _plan_dedup(report: AnalysisReport, plan: _Plan) -> None:
+def _plan_dedup(
+    report: AnalysisReport, plan: _Plan, force_master_runtime: str | None = None
+) -> None:
+    all_instances = report.instances
     for group in report.duplicates:
-        master_real = group.master.real_path
+        master = group.master
+        if force_master_runtime:
+            override = next(
+                (i for i in group.instances if i.runtime.value == force_master_runtime),
+                None,
+            )
+            if override is not None:
+                master = override
+        master_real = master.real_path
+        rationale_for_group = _build_dedup_rationale(group, all_instances, master)
         for inst in group.instances:
-            if inst is group.master:
+            if inst is master:
                 continue
             if inst.is_symlink and inst.real_path == master_real:
                 continue
@@ -79,7 +115,33 @@ def _plan_dedup(report: AnalysisReport, plan: _Plan) -> None:
                     FsOp("move_to_backup", inst.path),
                     FsOp("symlink", master_real, inst.path),
                 ],
+                rationale=rationale_for_group,
             )
+
+
+def _build_dedup_rationale(group, all_instances: list, master=None) -> list[str]:
+    """Build per-action rationale lines explaining the master election."""
+    from datetime import datetime
+    chosen_master = master if master is not None else group.master
+    lines = [t("rat_why_master")]
+    for inst in group.instances:
+        ver = inst.version or "-"
+        try:
+            mt = datetime.fromtimestamp(inst.mtime).strftime("%Y-%m-%d %H:%M")
+        except (OSError, ValueError):
+            mt = "?"
+        inbound = sum(
+            1 for o in all_instances
+            if o is not inst and o.is_symlink and o.real_path == inst.real_path
+        )
+        marker = t("rat_master_row") if inst is chosen_master else ""
+        lines.append(
+            f"  {inst.runtime.value:14}  v={ver:6}  "
+            f"inbound={inbound}  mtime={mt}{marker}"
+        )
+    lines.append("")
+    lines.append(t("rat_will_do"))
+    return lines
 
 
 def _plan_junk(report: AnalysisReport, plan: _Plan) -> None:
@@ -89,6 +151,11 @@ def _plan_junk(report: AnalysisReport, plan: _Plan) -> None:
             t("act_junk_title", pattern=junk.pattern),
             f"{_short(junk.path)}",
             [FsOp("move_to_backup", junk.path)],
+            rationale=[
+                t("rat_junk_pattern", pattern=junk.pattern),
+                "",
+                t("rat_will_do"),
+            ],
         )
 
 
@@ -99,11 +166,21 @@ def _plan_broken(report: AnalysisReport, plan: _Plan) -> None:
             t("act_broken_title", rt=broken.runtime.value),
             f"{_short(broken.path)} (was → {_short(broken.intended_target)})",
             [FsOp("remove_symlink", broken.path)],
+            rationale=[
+                t("rat_broken_detect"),
+                t("rat_broken_safe"),
+                "",
+                t("rat_will_do"),
+            ],
         )
 
 
-def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySummary:
-    actions = build_actions(report)
+def apply_actions(
+    report: AnalysisReport,
+    interactive: bool = True,
+    force_master_runtime: str | None = None,
+) -> ApplySummary:
+    actions = build_actions(report, force_master_runtime=force_master_runtime)
     summary = ApplySummary()
     if not actions:
         print(t("no_actions"))
@@ -124,7 +201,20 @@ def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySumm
 
     for action in actions:
         print(f"[{action.id}/{len(actions)}] {action.title}")
-        print(f"  {action.detail}")
+        for line in action.rationale:
+            print(f"  {line}" if line and not line.startswith(" ") else line)
+        has_symlink = False
+        for op in action.ops:
+            if op.kind == "move_to_backup":
+                print(f"    backup  {_short(op.src)}  →  {_short(backup_dir)}/")
+            elif op.kind == "symlink" and op.dst is not None:
+                print(f"    symlink {_short(op.dst)}  →  {_short(op.src)}")
+                has_symlink = True
+            elif op.kind == "remove_symlink":
+                print(f"    unlink  {_short(op.src)}")
+        if has_symlink:
+            print(f"  {t('rat_codex_warn')}")
+        print(f"  {t('rat_reversible')}")
         choice = "y" if (not interactive or action.type in auto_yes_for) else _ask_choice()
 
         if choice == "q":

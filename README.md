@@ -119,10 +119,15 @@ When several copies of the same skill exist, one becomes the canonical source
 the others symlink to. The election score is transparent:
 
 ```
-score = version (40%) + inbound symlinks (30%) + path depth (15%) + mtime (15%)
+score = version (40%) + inbound symlinks (40%) + mtime (20%)
 ```
 
-Tweak weights in `~/.skill-doctor/config.toml`.
+When no instance in a duplicate group declares a `metadata.version`, the
+version weight is redistributed evenly to the remaining two signals — the
+algorithm doesn't pretend a 40% lever is doing work it isn't. Weights are
+tunable in `~/.skill-doctor/config.toml`. Path-depth weight (`path_depth`)
+is recognised but defaults to `0.0` — it was dropped in v0.4.0 because no
+community convention supports "deeper path = more canonical."
 
 ---
 
@@ -178,12 +183,27 @@ elected as the canonical source by a weighted score across four signals:
 
 | Signal             | Weight | Rationale                                                                     |
 |--------------------|-------:|-------------------------------------------------------------------------------|
-| `metadata.version` |   40%  | Higher declared SemVer is the strongest signal of "newest writeable copy".    |
-| Inbound symlinks   |   30%  | If *N* sibling instances already resolve to this path, it is in fact the source. |
-| Path depth         |   15%  | Monorepo conventions place canonical sources at deeper paths (`monorepo/skills/x` vs `runtime/x`). |
-| `mtime` recency    |   15%  | Tiebreaker for instances with otherwise equal provenance.                     |
+| `metadata.version` |   40%  | Higher declared SemVer is the strongest signal of "newest writeable copy". When no instance in the group has a version, this 40% redistributes equally to the other two axes. |
+| Inbound symlinks   |   40%  | If *N* sibling instances already resolve to this path, it is in fact the source. Strongest empirical signal in practice. |
+| `mtime` recency    |   20%  | Tiebreaker for instances with otherwise equal provenance.                     |
 
-All weights are configurable via `~/.skill-doctor/config.toml`.
+All weights are configurable via `~/.skill-doctor/config.toml`. A
+`path_depth` weight is recognised by the loader but defaults to `0.0`;
+earlier versions of skill-doctor used a 15% path-depth weight on the
+intuition that "deeper paths are monorepo sources," but a community survey
+found no published convention to support this — the inverse intuition
+(root-level = canonical) is implied by Claude Code's enterprise > personal >
+project precedence — so the weight was removed in v0.4.0. Set it back if
+your project has a clear deeper-is-source convention.
+
+### Designating a master manually
+
+For projects with a clear canonical source convention (skillshare-style),
+override the elected master per run:
+
+```bash
+skill-doctor clean --master openclaw   # OpenClaw wins every duplicate group
+```
 
 **Provenance.** SHA-256 is specified in NIST FIPS PUB 180-4 (August 2015).
 The content-addressable equivalence model follows Git's object model (Chacon

@@ -40,6 +40,9 @@ RUNTIME_ROOTS: tuple[tuple[Path, Runtime, str], ...] = (
 
 
 # Junk file detection (macOS / editor / iCloud copy artifacts).
+# NEVER include patterns that overlap with iCloud offload placeholders (`*.icloud`).
+# See anthropics/claude-code#32637 — a tool deleted real iCloud-offloaded files
+# thinking they were empty. We hard-exclude that suffix below.
 JUNK_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r" \d+\.md$"), "macos-copy"),
     (re.compile(r" \d+\.json$"), "macos-copy"),
@@ -50,10 +53,24 @@ JUNK_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^\.DS_Store$"), "ds-store"),
     (re.compile(r"^\._"), "apple-double"),
     (re.compile(r"^__MACOSX$"), "macosx-zip"),
+    # Vim swap regex per github/gitignore canonical Global/Vim.gitignore.
+    (re.compile(r"^[._].*\.s[a-v][a-z]$"), "vim-swap"),
+    (re.compile(r"^[._].*\.sw[a-p]$"), "vim-swap"),
     (re.compile(r"\.swp$"), "vim-swap"),
     (re.compile(r"\.swo$"), "vim-swap"),
     (re.compile(r"~$"), "editor-backup"),
     (re.compile(r"\.un~$"), "vim-undo"),
+)
+
+
+# Paths to NEVER scan / NEVER flag — protected because they may contain
+# user data masquerading as "junk" (iCloud offload placeholders, etc.).
+JUNK_PROTECTED_PARENTS = (
+    "/Library/CloudStorage/",     # macOS iCloud Drive / Dropbox / OneDrive
+    "/Library/Mobile Documents/",  # legacy iCloud path
+)
+JUNK_PROTECTED_SUFFIXES = (
+    ".icloud",   # iCloud Drive offload placeholder; deleting destroys real data
 )
 
 
@@ -93,6 +110,16 @@ def _hash_body(body: str) -> str:
     return hashlib.sha256(_normalize_body(body).encode("utf-8")).hexdigest()
 
 
+def _is_junk_protected(path: Path) -> bool:
+    """True if `path` lives somewhere we must not flag as junk (iCloud, cloud sync)."""
+    s = str(path)
+    if any(p in s for p in JUNK_PROTECTED_PARENTS):
+        return True
+    if any(s.endswith(suf) for suf in JUNK_PROTECTED_SUFFIXES):
+        return True
+    return False
+
+
 def _detect_junk(directory: Path, runtime: Runtime) -> list[JunkFile]:
     """Recursively find junk files in a skill directory (handles e.g. scripts/foo 2.py)."""
     found: list[JunkFile] = []
@@ -103,6 +130,8 @@ def _detect_junk(directory: Path, runtime: Runtime) -> list[JunkFile]:
     except OSError:
         return found
     for entry in entries:
+        if _is_junk_protected(entry):
+            continue
         for pattern, tag in JUNK_PATTERNS:
             if pattern.search(entry.name):
                 found.append(JunkFile(path=entry, pattern=tag, runtime=runtime))

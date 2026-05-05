@@ -82,6 +82,7 @@ class Action:
     title: str                     # one-line summary
     detail: str                    # what will happen
     ops: list[FsOp]                # ordered fs operations
+    rationale: list[str] = field(default_factory=list)  # why we propose this
 
 
 @dataclass

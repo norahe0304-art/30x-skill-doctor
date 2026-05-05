@@ -149,6 +149,37 @@ _TR: dict[str, dict[str, str]] = {
                          "zh": "清理垃圾文件（{pattern}）"},
     "act_broken_title": {"en": "Remove broken symlink ({rt})",
                          "zh": "移除断链（{rt}）"},
+    # rationale lines (printed before each prompt)
+    "rat_why_master": {
+        "en": "Master picked by score across 3 signals "
+              "(version · copies pointing here · last modified):",
+        "zh": "主源按 3 个信号打分自动选出 "
+              "（版本号 · 被几个副本指向 · 最近修改时间）：",
+    },
+    "rat_master_row":   {"en": "  ← master", "zh": "  ← 主源"},
+    "rat_will_do":      {"en": "Will do:",        "zh": "动作："},
+    "rat_reversible": {
+        "en": "Reversible: skill-doctor undo restores everything above.",
+        "zh": "可恢复：skill-doctor undo 一行还原以上所有变更。",
+    },
+    "rat_codex_warn": {
+        "en": "Note: Codex CLI < v1.0 may not load directory symlinks reliably "
+              "(github.com/openai/codex/issues/17344, /11314).",
+        "zh": "提示：Codex CLI < v1.0 在某些版本上加载目录软链不稳定 "
+              "(github.com/openai/codex/issues/17344, /11314).",
+    },
+    "rat_junk_pattern": {
+        "en": "Pattern '{pattern}' matched — see methodology in skill-doctor README.",
+        "zh": "命中规则 '{pattern}' — 详见 skill-doctor README 方法论.",
+    },
+    "rat_broken_detect": {
+        "en": "POSIX rule: path.is_symlink() and not path.exists() — target gone.",
+        "zh": "POSIX 判定: path.is_symlink() 且 not path.exists() — 目标已不存在.",
+    },
+    "rat_broken_safe": {
+        "en": "Safe: symlinks store no data; removing this loses nothing.",
+        "zh": "无风险：软链不存数据，删它不丢任何东西。",
+    },
     "no_backups":       {"en": "No backups to undo.", "zh": "没有可撤销的备份。"},
     "no_manifest":      {"en": "backup {dir} is missing manifest.json",
                          "zh": "备份 {dir} 缺少 manifest.json"},

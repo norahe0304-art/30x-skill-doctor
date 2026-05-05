@@ -24,8 +24,9 @@ DEFAULT_WEIGHTS = {
     "mtime_freshness": 0.15,
 }
 
-STALE_DAYS_DEFAULT = 180  # Skills with mtime older than this are flagged. mtime-only signal.
-# 半年没动是合理的"该看一眼"阈值。Agent skills 这个概念整体也才几个月，365 天太宽。
+STALE_DAYS_DEFAULT = 90  # Skills with mtime older than this are flagged. mtime-only signal.
+# 3 months feels right — agent skills are a fast-evolving space, anything
+# untouched for that long deserves at least a glance.
 
 
 def ensure_config_dir() -> None:

@@ -110,7 +110,7 @@ Need to recover an older one? `skill-doctor undo --pick`.
 | 🟡 **Drift** | Same name, different content (e.g. v1.1 in Claude, v1.0 in OpenClaw) | Surface only — you choose the source of truth |
 | ✗ **Broken** | Symlink whose target doesn't exist anymore | Remove the dead link |
 | 🗑 **Junk** | macOS `* 2.md`, `.DS_Store`, vim swap files, etc., anywhere in the tree | Backup and delete |
-| 🕰 **Stale** | Skill directory untouched for > 180 days (mtime) | Just flagged — your call |
+| 🕰 **Stale** | Skill directory untouched for > 90 days (mtime) | Just flagged — your call |
 | 📋 **Write quality** | SKILL.md hygiene + suggested fixes (cached, near-instant after first scan) | — |
 
 ### Master election (the dedup heart)
@@ -123,6 +123,195 @@ score = version (40%) + inbound symlinks (30%) + path depth (15%) + mtime (15%)
 ```
 
 Tweak weights in `~/.skill-doctor/config.toml`.
+
+---
+
+## Methodology
+
+Each diagnostic dimension is documented as a four-part contract: **definition**
+(what is being asserted), **detection** (the algorithm that produces the
+assertion), **provenance** (the standards or specifications the algorithm
+relies on), and **failure modes** (where the assertion can be wrong, and the
+direction of error). Objective facts derived from formal specifications are
+kept separate from heuristics calibrated by the maintainer.
+
+### 📂 Categories
+
+**Definition.** Every discovered skill receives a single label from a closed
+set: `SEO`, `Marketing`, `Dev`, `Ads`, `Deploy`, `Data`, `Design`, `AI/Video`,
+`Other`, `Uncategorized`.
+
+**Detection.** Two-pass classifier evaluated in priority order:
+
+1. Path-prefix match against a hand-curated lookup table (`30x-seo-*` → SEO,
+   `ads-*` → Ads, etc.).
+2. Description-keyword match against a per-category bag of substrings.
+3. Fallback to `Other` if at least one keyword fires; `Uncategorized` if the
+   skill has no description.
+
+**Provenance.** No external specification governs categorization. The lookup
+table lives in `src/skill_doctor/classify.py` and is the canonical authority.
+This dimension is a *viewer convenience*, not a correctness check.
+
+**Failure modes.** Skills with bespoke naming and no domain keywords land in
+`Other`. On a 453-skill library, ~32% currently fall into `Other`; this is a
+classifier-coverage limit, not a user error.
+
+### 🟠 Duplicates
+
+**Definition.** A *duplicate group* is a set of two or more SKILL.md files
+with byte-identical normalized bodies AND identical directory basenames.
+
+**Detection.**
+
+```
+key  = ( sha256( normalize(body) ), basename(skill_dir) )
+dup  = { key | |instances(key)| ≥ 2 }
+```
+
+Body normalization strips trailing whitespace per line and collapses leading
+and trailing blank lines. Identical basenames are required to prevent
+unrelated skills with coincidentally-identical content from being merged.
+
+**Master election.** For each duplicate group, exactly one instance is
+elected as the canonical source by a weighted score across four signals:
+
+| Signal             | Weight | Rationale                                                                     |
+|--------------------|-------:|-------------------------------------------------------------------------------|
+| `metadata.version` |   40%  | Higher declared SemVer is the strongest signal of "newest writeable copy".    |
+| Inbound symlinks   |   30%  | If *N* sibling instances already resolve to this path, it is in fact the source. |
+| Path depth         |   15%  | Monorepo conventions place canonical sources at deeper paths (`monorepo/skills/x` vs `runtime/x`). |
+| `mtime` recency    |   15%  | Tiebreaker for instances with otherwise equal provenance.                     |
+
+All weights are configurable via `~/.skill-doctor/config.toml`.
+
+**Provenance.** SHA-256 is specified in NIST FIPS PUB 180-4 (August 2015).
+The content-addressable equivalence model follows Git's object model (Chacon
+& Straub, *Pro Git*, 2nd ed., ch. 10).
+
+**Failure modes.** Detection is exact: SHA-256 collision probability is
+bounded at ≈ 2⁻²⁵⁶ and is treated as zero. Master election, by contrast, is a
+heuristic and may diverge from a user's project-specific source-of-truth
+convention; manual override is supported by editing the resulting plan
+before applying.
+
+### 🟡 Drift
+
+**Definition.** Two or more instances share a directory basename but differ
+in SHA-256 hash — i.e., the same skill identity has divergent content across
+runtimes.
+
+**Detection.** Group by `basename`; emit a drift group whenever the set of
+distinct hashes inside that group has cardinality ≥ 2.
+
+**Policy.** Drift is **never** auto-resolved. Divergence is frequently
+intentional — for example, when a user customizes a skill for a specific
+runtime — and silent merging risks data loss. The tool surfaces drift; the
+user designates the source of truth.
+
+**Provenance.** Detection follows the same content-addressable model as
+duplicate detection. The non-resolution policy is a maintainer-chosen safety
+invariant, not derived from an external spec.
+
+**Failure modes.** A single-byte difference (e.g., a trailing space) is
+sufficient to register drift. False-positive risk is non-trivial; this is a
+deliberate trade against the larger risk of silent data loss.
+
+### ✗ Broken symlinks
+
+**Definition.** A path that is itself a symlink, but whose target does not
+resolve to an existing filesystem entry.
+
+**Detection.** `path.is_symlink() and not path.exists()`. Equivalent to
+POSIX `find <root> -xtype l`.
+
+**Policy.** `clean` calls `unlink(path)`. Symlinks store no payload, so
+removal is loss-free.
+
+**Provenance.** POSIX.1-2017 (IEEE Std 1003.1™-2017) §4.1.7 (symbolic link
+resolution) and §`lstat`. Confirmed by macOS `lstat(2)`.
+
+**Failure modes.** None at the detection layer. The relation is exact under
+POSIX semantics.
+
+### 🗑 Junk files
+
+**Definition.** Files inside a skill tree that are not user content but
+rather artefacts of the host filesystem, sync layer, or editor.
+
+**Detection.** Filename matches against a curated regex catalog:
+
+| Pattern                     | Source                                            |
+|-----------------------------|---------------------------------------------------|
+| `* \d+\.(md|json|py|...)`   | iCloud Drive filename-collision suffixing         |
+| `.DS_Store`                 | macOS Finder metadata (Apple Support HT204016)    |
+| `._*` (AppleDouble)         | macOS extended-attribute side-files               |
+| `*.swp`, `*.swo`            | Vim swap (`:help swap-file`)                      |
+| `*~`, `*.un~`               | Vim backup, undo                                  |
+| `__MACOSX/`                 | macOS-injected zip metadata directory             |
+
+Scan is recursive across the entire skill directory tree (`Path.rglob`).
+
+**Provenance.** Each entry corresponds to a documented behavior of the
+producing system. The set is curated against observed pollution on real
+machines, not generated from a single spec.
+
+**Failure modes.** Deliberately-named files matching the patterns (e.g.,
+`top-10 2.md`) will be flagged. Mitigated by mandatory pre-deletion backup
+under `~/.skill-doctor/backup/<timestamp>/` and one-command `undo`.
+
+### 🕰 Stale
+
+**Definition.** A skill whose tree has not received any modification within a
+configurable time window — flagged for review, **not** declared obsolete.
+
+**Detection.** `max(stat.st_mtime for f in tree)` compared against
+`now - threshold`. Default threshold is 90 days; override with
+`--stale-days N`.
+
+**Provenance.** POSIX `stat(2)` modification time. The 90-day default is a
+maintainer-chosen heuristic, not specification-derived.
+
+**Failure modes.** This is the **weakest** dimension epistemologically.
+Modification time is not invocation time; the tool has no access to runtime
+telemetry. A skill that is stable, correct, and invoked daily will be flagged
+stale if its files have not been edited in 90 days. The output should be
+treated as a "consider reviewing" prompt, never as a deletion recommendation.
+
+### 📋 Write quality
+
+**Definition.** A per-skill score (B/C/D/F) and ordered list of concrete
+rewrite suggestions, evaluating SKILL.md hygiene against the canonical
+agent-skill authoring specification.
+
+**Detection.** Aligned with Anthropic's official `skill-creator`
+specification — the source of truth for what constitutes a well-formed
+SKILL.md. Results are cached per file by `mtime`; first run on a 453-skill
+library takes ≈ 40 s, subsequent runs ≈ 0.4 s with no edits.
+
+**Provenance.** [Anthropic skill-creator skill](https://github.com/anthropics/skills/tree/main/skills/skill-creator)
+defines the rule set (frontmatter required fields, body length, description
+format, naming conventions, progressive-disclosure structure).
+
+**Failure modes.** Quality scoring is opt-in: requires the underlying
+evaluator to be available on `PATH`. When unavailable, the dimension is
+silently elided and the remaining six dimensions function unchanged.
+
+---
+
+## Out of scope
+
+Skill Doctor explicitly does **not**:
+
+- **Measure invocation frequency.** Runtimes do not expose skill-level
+  telemetry; modification time is not a substitute.
+- **Score overall "skill quality"** beyond the SKILL.md hygiene captured
+  above. Behavioral evaluation belongs to runtime-specific tooling.
+- **Detect malicious or adversarial patterns.** For supply-chain or prompt-
+  injection concerns, use a dedicated security auditor.
+- **Modify your filesystem without consent.** Every state-changing operation
+  is interactive (`clean`), backed up to `~/.skill-doctor/backup/<timestamp>/`,
+  and reversible via `skill-doctor undo`.
 
 ---
 

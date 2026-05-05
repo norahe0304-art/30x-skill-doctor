@@ -42,15 +42,15 @@ RUNTIME_LABEL = {
 
 class Category(StrEnum):
     SEO = "SEO"
-    ADS = "广告"
-    MARKETING = "营销"
-    DEV = "开发"
-    DEPLOY = "部署"
-    DATA = "数据"
-    DESIGN = "设计"
-    AI_VIDEO = "AI/视频"
-    OTHER = "其他"
-    UNCATEGORIZED = "未分类"
+    ADS = "Ads"
+    MARKETING = "Marketing"
+    DEV = "Dev"
+    DEPLOY = "Deploy"
+    DATA = "Data"
+    DESIGN = "Design"
+    AI_VIDEO = "AI/Video"
+    OTHER = "Other"
+    UNCATEGORIZED = "Uncategorized"
 
 
 class IssueType(StrEnum):

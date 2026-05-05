@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>小红书 Carousel · 中文预览</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/components.css">
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { font: 400 14px/1.5 "Geist", -apple-system, "PingFang SC", sans-serif; color: var(--color-foreground); background: var(--color-default); }
+    .page-head { max-width: 1200px; margin: 0 auto; padding: 64px 60px 32px; }
+    .eyebrow { font-size: 14px; color: var(--color-muted); letter-spacing: 1.5px; margin-bottom: 8px; }
+    .h1 { font-size: 40px; font-weight: 500; letter-spacing: -1px; margin: 0 0 8px 0; }
+    .h-sub { font-size: 18px; color: var(--color-muted); }
+    .grid { max-width: 1200px; margin: 0 auto; padding: 32px 60px 80px; display: grid; grid-template-columns: 1fr; gap: 56px; }
+    .slide-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .slide-meta { display: flex; align-items: baseline; justify-content: space-between; }
+    .slide-meta .label { font-size: 14px; font-weight: 500; color: var(--color-muted); letter-spacing: 1.5px; }
+    .slide-meta .name { font-size: 22px; font-weight: 500; }
+    .slide-meta .open { font-size: 13px; color: var(--color-muted); text-decoration: none; }
+    .slide-meta .open:hover { color: var(--color-foreground); }
+    .frame-shell { position: relative; border-radius: 32px; overflow: hidden; box-shadow: var(--shadow-overlay); background: var(--color-background); width: 100%; max-width: 1080px; aspect-ratio: 1080 / 1350; }
+    .frame-shell iframe { position: absolute; top: 0; left: 0; width: 1080px; height: 1350px; border: 0; transform-origin: top left; }
+    @media (max-width: 1140px) { .frame-shell iframe { transform: scale(0.7); } .frame-shell { aspect-ratio: 756 / 945; } }
+  </style>
+</head>
+<body>
+  <div class="page-head">
+    <div class="eyebrow">REVIEW · 中文版</div>
+    <h1 class="h1">Skill Doctor · 小红书 Carousel</h1>
+    <p class="h-sub">5 张图，1080 × 1350（4:5）· Zi UI · 中文文案</p>
+  </div>
+
+  <div class="grid">
+    <div class="slide-wrap">
+      <div class="slide-meta">
+        <div><span class="label">SLIDE 01</span> &nbsp; <span class="name">封面 · 钩子</span></div>
+        <a class="open" href="01-cover-zh.html" target="_blank">单独看 ↗</a>
+      </div>
+      <div class="frame-shell"><iframe src="01-cover-zh.html"></iframe></div>
+    </div>
+
+    <div class="slide-wrap">
+      <div class="slide-meta">
+        <div><span class="label">SLIDE 02</span> &nbsp; <span class="name">问题 · 痛点</span></div>
+        <a class="open" href="02-problem-zh.html" target="_blank">单独看 ↗</a>
+      </div>
+      <div class="frame-shell"><iframe src="02-problem-zh.html"></iframe></div>
+    </div>
+
+    <div class="slide-wrap">
+      <div class="slide-meta">
+        <div><span class="label">SLIDE 03</span> &nbsp; <span class="name">方案 · 7 维度</span></div>
+        <a class="open" href="03-solution-zh.html" target="_blank">单独看 ↗</a>
+      </div>
+      <div class="frame-shell"><iframe src="03-solution-zh.html"></iframe></div>
+    </div>
+
+    <div class="slide-wrap">
+      <div class="slide-meta">
+        <div><span class="label">SLIDE 04</span> &nbsp; <span class="name">实测 · GIF demo</span></div>
+        <a class="open" href="04-demo-zh.html" target="_blank">单独看 ↗</a>
+      </div>
+      <div class="frame-shell"><iframe src="04-demo-zh.html"></iframe></div>
+    </div>
+
+    <div class="slide-wrap">
+      <div class="slide-meta">
+        <div><span class="label">SLIDE 05</span> &nbsp; <span class="name">CTA · 安装</span></div>
+        <a class="open" href="05-cta-zh.html" target="_blank">单独看 ↗</a>
+      </div>
+      <div class="frame-shell"><iframe src="05-cta-zh.html"></iframe></div>
+    </div>
+  </div>
+</body>
+</html>

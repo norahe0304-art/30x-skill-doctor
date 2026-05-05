@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>01 · Cover</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/components.css">
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { font: 400 14px/1.5 "Geist", -apple-system, "PingFang SC", sans-serif; color: var(--color-foreground); background: var(--color-default); display: grid; place-items: center; min-height: 100vh; }
+    .canvas { width: 1080px; height: 1350px; background: var(--color-background); box-shadow: var(--shadow-overlay); padding: 80px; box-sizing: border-box; display: flex; flex-direction: column; }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    .pg { font-size: 14px; color: var(--color-muted); letter-spacing: 1.5px; }
+    .center { margin: auto 0; }
+    .eyebrow {
+      font-size: 28px; font-weight: 500;
+      color: var(--color-muted);
+      margin-bottom: 32px;
+    }
+    .punchy {
+      font-size: 168px; font-weight: 500; line-height: 1.0;
+      letter-spacing: -4px;
+      color: var(--color-foreground);
+    }
+    .punchy .accent { color: var(--color-accent); }
+    .breakdown {
+      font-size: 32px; font-weight: 500;
+      color: var(--color-muted); line-height: 1.4;
+      margin-top: 24px;
+    }
+    .breakdown .accent { color: var(--color-foreground); }
+    .footer { display: flex; justify-content: space-between; align-items: baseline; padding-top: 32px; }
+    .cta { font-size: 26px; font-weight: 500; color: var(--color-foreground); }
+    .cta .arrow { color: var(--color-accent); }
+    .wm { font-size: 14px; color: var(--color-muted); letter-spacing: 0.5px; }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="top">
+      <span class="badge badge--lg">Skill Doctor</span>
+      <span class="pg">01 / 05</span>
+    </div>
+    <div class="center">
+      <div class="punchy">装的 skill<br>多到<span class="accent">真的要爆了。</span></div>
+    </div>
+    <div class="footer">
+      <span class="cta">于是我崩溃了，然后写了这个 CLI <span class="arrow">→</span></span>
+      <span class="wm">@30x</span>
+    </div>
+  </div>
+</body>
+</html>

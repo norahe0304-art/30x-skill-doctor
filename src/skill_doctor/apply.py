@@ -18,6 +18,7 @@ from pathlib import Path
 
 from .apply_ops import execute, undo_op
 from .config import BACKUP_ROOT, ensure_config_dir
+from .i18n import t
 from .models import Action, ActionType, AnalysisReport, FsOp
 
 
@@ -72,8 +73,8 @@ def _plan_dedup(report: AnalysisReport, plan: _Plan) -> None:
                 continue
             plan.add(
                 ActionType.DEDUP,
-                f"合并 {inst.dir_name} ({inst.runtime.value})",
-                f"{_short(inst.path)} → 软链到 {_short(master_real)}",
+                t("act_dedup_title", name=inst.dir_name, rt=inst.runtime.value),
+                t("act_dedup_detail", src=_short(inst.path), dst=_short(master_real)),
                 [
                     FsOp("move_to_backup", inst.path),
                     FsOp("symlink", master_real, inst.path),
@@ -85,7 +86,7 @@ def _plan_junk(report: AnalysisReport, plan: _Plan) -> None:
     for junk in report.junk_files:
         plan.add(
             ActionType.DELETE_JUNK,
-            f"清理垃圾文件 ({junk.pattern})",
+            t("act_junk_title", pattern=junk.pattern),
             f"{_short(junk.path)}",
             [FsOp("move_to_backup", junk.path)],
         )
@@ -95,7 +96,7 @@ def _plan_broken(report: AnalysisReport, plan: _Plan) -> None:
     for broken in report.broken_links:
         plan.add(
             ActionType.REMOVE_BROKEN,
-            f"移除断链 ({broken.runtime.value})",
+            t("act_broken_title", rt=broken.runtime.value),
             f"{_short(broken.path)} (was → {_short(broken.intended_target)})",
             [FsOp("remove_symlink", broken.path)],
         )
@@ -105,7 +106,7 @@ def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySumm
     actions = build_actions(report)
     summary = ApplySummary()
     if not actions:
-        print("✓ 没有需要整理的事项")
+        print(t("no_actions"))
         return summary
 
     ensure_config_dir()
@@ -117,7 +118,9 @@ def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySumm
 
     auto_yes_for: set[ActionType] = set()
 
-    print(f"\n下面是要做的 {len(actions)} 件事 (备份目录: {_short(backup_dir)})\n")
+    print()
+    print(t("actions_queued", n=len(actions), dir=_short(backup_dir)))
+    print()
 
     for action in actions:
         print(f"[{action.id}/{len(actions)}] {action.title}")
@@ -125,7 +128,7 @@ def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySumm
         choice = "y" if (not interactive or action.type in auto_yes_for) else _ask_choice()
 
         if choice == "q":
-            print("已停止。")
+            print(t("stopped"))
             break
         if choice == "n":
             summary.skipped += 1
@@ -144,24 +147,28 @@ def apply_actions(report: AnalysisReport, interactive: bool = True) -> ApplySumm
                 }
             )
             summary.completed += 1
-            print("  ✓ 已执行")
+            print(t("act_done"))
         except OSError as e:
             summary.failed += 1
-            print(f"  ✗ 失败: {e}")
+            print(t("act_failed", err=str(e)))
 
     summary.manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     print(
-        f"\n完成: ✓{summary.completed} 跳过 {summary.skipped} 失败 {summary.failed}"
-        f"\n后悔了? skill-doctor undo"
+        t(
+            "apply_sum",
+            done=summary.completed,
+            skipped=summary.skipped,
+            failed=summary.failed,
+        )
     )
     return summary
 
 
 def _ask_choice() -> str:
     while True:
-        sys.stdout.write("  执行? [y/N/q/a (a=同类型批量同意)] ")
+        sys.stdout.write(t("apply_prompt"))
         sys.stdout.flush()
         try:
             raw = (sys.stdin.readline() or "").strip().lower()
@@ -187,17 +194,17 @@ def undo_last(picked: Path | None = None) -> UndoSummary:
     else:
         target = picked
     if target is None:
-        print("没有可撤销的 backup。")
+        print(t("no_backups"))
         return summary
     manifest_path = target / "manifest.json"
     if not manifest_path.exists():
-        print(f"backup {target} 缺少 manifest.json")
+        print(t("no_manifest", dir=str(target)))
         return summary
 
     summary.backup_dir = target
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    print(f"撤销 {target.name} 中 {len(manifest['actions'])} 个动作...")
+    print(t("undo_starting", name=target.name, n=len(manifest["actions"])))
     for action in reversed(manifest["actions"]):
         for op in reversed(action["ops_done"]):
             try:
@@ -205,6 +212,6 @@ def undo_last(picked: Path | None = None) -> UndoSummary:
                 summary.restored += 1
             except OSError as e:
                 summary.failed += 1
-                print(f"  ✗ 撤销失败 {op}: {e}")
-    print(f"撤销完成: ✓{summary.restored} 失败 {summary.failed}")
+                print(t("undo_op_failed", op=op, err=str(e)))
+    print(t("undo_summary", restored=summary.restored, failed=summary.failed))
     return summary

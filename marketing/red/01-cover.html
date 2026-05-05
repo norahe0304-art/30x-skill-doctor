@@ -1,49 +1,66 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>01 · 钩子</title>
+  <title>01 · Cover</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&display=swap">
   <link rel="stylesheet" href="assets/tokens.css">
   <link rel="stylesheet" href="assets/components.css">
   <style>
     html, body { margin: 0; padding: 0; }
-    body { font: 400 14px/1.5 "Geist", -apple-system, "PingFang SC", sans-serif; color: var(--color-foreground); display: grid; place-items: center; min-height: 100vh; background: var(--color-default); }
-    .canvas { width: 1080px; height: 1350px; background: linear-gradient(180deg, #FFF7E8 0%, #FFE6C7 50%, #FFCB94 100%); position: relative; overflow: hidden; padding: 80px 72px; box-sizing: border-box; box-shadow: var(--shadow-overlay); display: flex; flex-direction: column; }
-    .blob { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; }
-    .blob-1 { top: -180px; right: -180px; width: 540px; height: 540px; background: #FFD64A; opacity: 0.55; }
-    .blob-2 { bottom: -200px; left: -180px; width: 480px; height: 480px; background: var(--color-accent-soft); opacity: 0.45; }
+    body {
+      font: 400 14px/1.5 "Geist", -apple-system, "PingFang SC", sans-serif;
+      color: var(--color-foreground);
+      background: var(--color-default);
+      display: grid; place-items: center; min-height: 100vh;
+    }
+    .canvas {
+      width: 1080px; height: 1350px;
+      background: var(--color-background);
+      box-shadow: var(--shadow-overlay);
+      padding: 80px;
+      box-sizing: border-box;
+      display: flex; flex-direction: column;
+    }
     .top { display: flex; justify-content: space-between; align-items: center; }
-    .badge { padding: 12px 24px; background: rgba(255, 255, 255, 0.85); border-radius: 999px; font-size: 26px; font-weight: 500; backdrop-filter: blur(8px); }
-    .page-num { font-size: 24px; font-weight: 500; color: var(--color-muted); letter-spacing: 1px; }
-    .hero { margin: auto 0; }
-    .lead { font-size: 56px; font-weight: 500; line-height: 1.2; margin-bottom: 24px; color: var(--color-muted); }
-    .number { font-size: 480px; font-weight: 500; line-height: 0.9; letter-spacing: -16px; background: linear-gradient(180deg, #1f1f23 30%, #d94132 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-    .punchline { font-size: 84px; font-weight: 500; line-height: 1.15; letter-spacing: -2px; margin-top: 28px; }
-    .punchline em { font-style: normal; background: linear-gradient(180deg, transparent 60%, #FFD64A 60%); padding: 0 8px; }
-    .swipe { text-align: center; font-size: 26px; color: var(--color-muted); font-weight: 500; }
-    .footer-row { display: flex; justify-content: space-between; align-items: center; }
-    .watermark { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 500; color: var(--color-muted); opacity: 0.65; }
-    .watermark-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-foreground); opacity: 0.5; }
+    .pg { font-size: 14px; color: var(--color-muted); letter-spacing: 1.5px; }
+    .center { margin: auto 0; }
+    .eyebrow {
+      font-size: 24px; font-weight: 500; color: var(--color-muted);
+      margin-bottom: 32px; letter-spacing: 0.5px;
+    }
+    .hero-num {
+      font: 500 360px/0.9 "Geist", sans-serif;
+      letter-spacing: -16px;
+      color: var(--color-foreground);
+      margin: 0;
+    }
+    .hero-line {
+      font-size: 56px; font-weight: 500; line-height: 1.15;
+      letter-spacing: -1px; margin-top: 32px;
+      color: var(--color-foreground);
+    }
+    .hero-line .muted { color: var(--color-muted); }
+    .footer { display: flex; justify-content: space-between; align-items: baseline; }
+    .swipe { font-size: 18px; font-weight: 500; color: var(--color-muted); letter-spacing: 0.5px; }
+    .wm { font-size: 14px; color: var(--color-muted); letter-spacing: 0.5px; }
   </style>
 </head>
 <body>
   <div class="canvas">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
     <div class="top">
-      <div class="badge">🩺 Skill Doctor</div>
-      <div class="page-num">01 / 05</div>
+      <span class="badge badge--lg">Skill Doctor</span>
+      <span class="pg">01 / 05</span>
     </div>
-    <div class="hero">
-      <div class="lead">我电脑里居然有</div>
-      <div class="number">453</div>
-      <div class="punchline">个 AI skill<br>而且<em>一团乱麻</em> 😵‍💫</div>
+    <div class="center">
+      <div class="eyebrow">My laptop currently has</div>
+      <div class="hero-num">453</div>
+      <div class="hero-line">AI agent skills, <span class="muted">across 8 runtimes.</span></div>
     </div>
-    <div class="footer-row">
-      <span class="swipe">滑动看看怎么救 →</span>
-      <span class="watermark"><span class="watermark-dot"></span>@30x · 30x-skill-doctor</span>
+    <div class="footer">
+      <span class="swipe">Swipe →</span>
+      <span class="wm">@30x · 30x-skill-doctor</span>
     </div>
   </div>
 </body>

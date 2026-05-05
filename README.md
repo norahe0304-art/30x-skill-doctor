@@ -1,41 +1,50 @@
-# Skill Doctor
+# 30x Skill Doctor
 
-**给 AI agent skill 做大扫除的工具。**
+**Spring-cleaning for your AI agent skill library.**
 
-你机器上 skill 太多 —— Claude 装了一堆，Codex 装了一堆，OpenClaw 又一堆，互相重复、互相打架，软链坏了不知道，一年没改的 skill 还在那躺着。
+If you use Claude Code, Codex, Cursor, OpenClaw, or any combination of them,
+your `~/.claude/skills/`, `~/.codex/skills/`, `~/.cursor/skills/`, and plugin
+directories are probably a graveyard. The same skill installed three times under
+three different names. Old version in one runtime, newer version in another.
+Symlinks pointing at deleted files.
 
-Skill Doctor 帮你看清现状 + 给你具体的清理方案。**永远不替你瞎删**，每个动作你点头才执行，删之前先备份，一行命令能撤回。
+`30x-skill-doctor` scans the lot, surfaces what's wrong, and walks you through
+a fix — interactively, with a backup, and a one-line undo.
+
+![Demo](./skill-doctor-demo.gif)
 
 ---
 
-## 三步上手
+## Three steps
 
-### 第 1 步：装
-
-```bash
-pipx install skill-doctor
-```
-
-或者用 uv：
+### 1. Install
 
 ```bash
-uv tool install skill-doctor
+pipx install 30x-skill-doctor
 ```
 
-没有 pipx？跑 `pip install pipx && pipx ensurepath` 装一下，或者直接 `pip install skill-doctor`。
+Or with uv:
 
-> **可选**：装 [`asm`](https://github.com/luongnv89/agent-skill-manager) 可以解锁 SKILL.md 写法质量评估那一块（`npm install -g agent-skill-manager`）。不装也能用其他 6 个维度。
+```bash
+uv tool install 30x-skill-doctor
+```
 
-### 第 2 步：看你有什么
+Plain `pip` works too: `pip install 30x-skill-doctor`.
+
+> Optional: install [`asm`](https://github.com/luongnv89/agent-skill-manager)
+> (`npm install -g agent-skill-manager`) to unlock the SKILL.md write-quality
+> dimension. Everything else works without it.
+
+### 2. See what you have
 
 ```bash
 skill-doctor
 ```
 
-你会看到这样一份报告：
+You'll get a one-screen report like this:
 
 ```
-📂 你有 453 个 skill, 跨 8 个 runtime:
+📂 You have 453 skills across 8 runtimes:
 
     Claude Code        154
     OpenClaw           151
@@ -46,137 +55,153 @@ skill-doctor
     OpenCode             9
     Cursor               2
 
-  按用途分类:
-    SEO (91) | 营销 (59) | 开发 (47) | 广告 (41) | 设计 (19) | ...
+  Categories:
+    Other (147) | SEO (91) | Marketing (59) | Dev (47) | Ads (41) | ...
 
-🟠 70 组重复 / duplicates (187 instances)
-🟡 38 组漂移 / drift (同名不同版本)
-✗  25 个断链 / broken links
+🟠 70 duplicate groups (187 instances)
+🟡 38 drift conflicts (same name, different content)
+✗  25 broken symlinks
 
-📋 写法质量评估 (附送, 来源: asm v2.6.1)
-  453 个 skill 评分   B:23 C:262 D:150 F:18
-  最低 5 个 + 修复建议:
-  humanizer-zh  23/100  F
-    • Write a one-sentence description that says specifically what...
-    • Add a "## Acceptance Criteria" section with testable statements...
+📋 SKILL.md write quality
+   B:23 C:262 D:150 F:18
 
-→ 整理: skill-doctor clean
+→ Clean up: skill-doctor clean
 ```
 
-### 第 3 步：整理（动手扫除）
+Dimensions with zero findings are hidden automatically. Clean machines just
+see the inventory and a green checkmark.
+
+### 3. Tidy up
 
 ```bash
 skill-doctor clean
 ```
 
-`clean` 就是"开扫"。它会**逐条问你**：
+It walks through every issue interactively:
 
 ```
-[1/48] 合并 ads-google (claude)
-  ~/.claude/skills/ads-google → 软链到 ~/.openclaw/skills/ads-google
-  执行? [y/N/q/a (a=同类型批量同意)]
+[1/48] Merge ads-google (claude)
+  ~/.claude/skills/ads-google → symlink to ~/.openclaw/skills/ads-google
+  Apply? [y/N/q/a (a = yes-to-all-of-this-type)]
 ```
 
-按键说明：
-- **y** 确认这一条
-- **N** 跳过这一条（直接回车也是跳过）
-- **q** 立即停止
-- **a** 这种类型后面全部同意（不再问）
+- **y** — apply this one
+- **N** — skip (default; bare Enter also skips)
+- **q** — stop right here
+- **a** — yes-to-all of this action type (no more prompts for it)
 
-**不放心？打 N 全跳过**，看完所有建议再决定。
-
-整理过程中删任何东西**先备份**到 `~/.skill-doctor/backup/<时间戳>/`，撤回一行命令：
+Anything destructive is `mv`'d to `~/.skill-doctor/backup/<timestamp>/` first,
+not removed. Roll back the last apply with:
 
 ```bash
 skill-doctor undo
 ```
 
----
-
-## 七个维度（这工具会查啥）
-
-| 是啥 | 干嘛的 |
-|---|---|
-| 📂 **用途分类** | 自动给 skill 贴标签：SEO / 广告 / 营销 / 开发 …… |
-| 🟠 **重复** | 同一份 skill 在多个 runtime 都有副本 → 建议软链合并到一份 |
-| 🟡 **漂移** | 同名 skill 但内容不一样了（比如 Claude 是 v1.1，OpenClaw 是 v1.0）→ 让你手动决定哪份是对的 |
-| ✗ **断链** | 软链指向已删除的文件，这 skill 用不了 → 帮你移除死链 |
-| 🗑 **垃圾** | macOS 自动留下的 `* 2.md` / `.DS_Store` 等垃圾文件 → 删 |
-| 🕰 **陈旧** | 整个 skill 目录超过半年没动 → 提醒你看一眼，不一定要删（默认 180 天，agent skills 这个概念整体也才几个月）|
-| 📋 **写法质量** | SKILL.md 写得规不规范 → 给分数 + 修复建议 |
-
-**自适应显示**：如果某个维度查出来 0 条，那一项就不会出现在报告里。清爽机器只看到分类 + 一句"一切正常"。
+Need to recover an older one? `skill-doctor undo --pick`.
 
 ---
 
-## 常用命令
+## Seven dimensions it checks
+
+| | What it catches | What `clean` does about it |
+|---|---|---|
+| 📂 **Categories** | Auto-tags every skill (SEO / Ads / Marketing / Dev / …) | — |
+| 🟠 **Duplicates** | Identical SKILL.md (sha256) under multiple runtimes | Replace copies with symlinks to a smart-elected master |
+| 🟡 **Drift** | Same name, different content (e.g. v1.1 in Claude, v1.0 in OpenClaw) | Surface only — you choose the source of truth |
+| ✗ **Broken** | Symlink whose target doesn't exist anymore | Remove the dead link |
+| 🗑 **Junk** | macOS `* 2.md`, `.DS_Store`, vim swap files, etc., anywhere in the tree | Backup and delete |
+| 🕰 **Stale** | Skill directory untouched for > 180 days (mtime) | Just flagged — your call |
+| 📋 **Write quality** | SKILL.md hygiene + suggested fixes (cached, near-instant after first scan) | — |
+
+### Master election (the dedup heart)
+
+When several copies of the same skill exist, one becomes the canonical source
+the others symlink to. The election score is transparent:
+
+```
+score = version (40%) + inbound symlinks (30%) + path depth (15%) + mtime (15%)
+```
+
+Tweak weights in `~/.skill-doctor/config.toml`.
+
+---
+
+## Common flags
 
 ```bash
-# 看（最常用）
-skill-doctor                       # 默认报告
-skill-doctor --full                # 完整大表（每个 skill 一行）
-skill-doctor --full --no-truncate  # 路径太长？这样不截断
-skill-doctor --version             # 看 skill-doctor + asm 版本
-
-# 整理
-skill-doctor clean                 # 逐条 y/N 确认整理
-skill-doctor undo                  # 撤销最近一次 apply
-
-# 进阶
-skill-doctor --stale-days 90       # 改陈旧阈值（默认 180 天）
-skill-doctor --runtime claude      # 只看 Claude Code
-skill-doctor --category seo        # 只看 SEO 类
-skill-doctor --json                # 喂给别的工具
-skill-doctor clean --yes           # 自动全跑（3 秒倒计时给 Ctrl+C）
-skill-doctor undo --pick           # 从历史 backup 选一个恢复
+skill-doctor                       # default report
+skill-doctor --full                # one row per skill
+skill-doctor --full --no-truncate  # don't shorten long paths
+skill-doctor --version             # version info
+skill-doctor --runtime claude      # filter by runtime
+skill-doctor --category seo        # filter by category
+skill-doctor --json                # machine-readable
+skill-doctor --stale-days 90       # change stale threshold
+skill-doctor --quality-n 10        # quick uncached quality sample
+skill-doctor clean                 # interactive tidy
+skill-doctor clean --yes           # non-interactive (3-second cancel)
+skill-doctor undo                  # roll back last apply
+skill-doctor undo --pick           # pick a past backup
 ```
 
 ---
 
-## 一些常见疑问
+## Custom runtime paths
 
-**Q: 它会自动删我的 skill 吗？**
-不会。所有删除前先 mv 到 `~/.skill-doctor/backup/`。一行 `skill-doctor undo` 完全恢复。
-
-**Q: "重复"怎么判定？**
-两个 skill 名字相同 + SKILL.md 内容 sha256 一致才算重复。不同名字的就算内容一样也不动你。
-
-**Q: "漂移"为什么不自动改？**
-两个版本不一样意味着可能是有意改的（比如你在 Claude 下手动调过）。我们不替你决定哪份对，只列出来你看。
-
-**Q: 第一次跑 `skill-doctor` 等了 40 秒？**
-首次会把每个 SKILL.md 跑一遍写法质量评估。**有缓存**，第二次跑就 0.4 秒。改了 SKILL.md 之后只重评那一个。
-
-**Q: 我有自己的 skill 路径，工具没扫到？**
-编辑 `~/.skill-doctor/config.toml`：
+Have skills somewhere unusual? Drop them into `~/.skill-doctor/config.toml`:
 
 ```toml
 [[extra_runtimes]]
 path = "~/my-skills"
-runtime = "unknown"
+runtime = "unknown"   # or any known tag: claude / codex / openclaw / agents / ...
 glob = "*"
-```
 
-**Q: 跑 `apply` 之后我后悔了？**
-```bash
-skill-doctor undo
+[weights]
+version = 0.40
+incoming_links = 0.30
+path_depth = 0.15
+mtime_freshness = 0.15
 ```
-
-或者从所有历史里选一个：
-```bash
-skill-doctor undo --pick
-```
-
-**Q: 写法质量评估的分数从哪来？**
-调用一个独立的开源评估器（[asm](https://github.com/luongnv89/agent-skill-manager)，对齐 Anthropic skill-creator 规范）。装了就自动用，没装也不影响其他 6 个核心维度。
 
 ---
 
-## 开发者向（你不需要看）
+## FAQ
+
+**Will it auto-delete anything?**
+No. Everything destructive is `mv`'d to `~/.skill-doctor/backup/` first. Run
+`skill-doctor undo` and the last apply is fully reversible.
+
+**Why no auto-fix for "drift"?**
+Two divergent copies might be intentional (you tweaked one for a specific
+runtime). The tool refuses to guess; it only flags.
+
+**First run takes ~40 seconds — what's it doing?**
+Scoring every SKILL.md for write quality. Subsequent runs hit a per-file mtime
+cache and finish in < 1 second. Edit one SKILL.md and only that one is
+re-scored.
+
+**My skill folder isn't on the default list.**
+Add it under `[[extra_runtimes]]` in `~/.skill-doctor/config.toml`.
+
+**Where does the write-quality score come from?**
+From `asm` (an open-source evaluator aligned with the Anthropic skill-creator
+spec). If `asm` isn't installed, the column is simply omitted — the other six
+dimensions don't depend on it.
+
+---
+
+## Developer quick-start
 
 ```bash
-uv run --no-editable pytest                  # 跑测试
-uv run --no-editable ruff check .            # lint
+git clone https://github.com/norahe0304-art/30x-skill-doctor.git
+cd 30x-skill-doctor
+uv sync
+uv run --no-editable pytest          # 32 tests
+uv run --no-editable ruff check .
+uv run --no-editable skill-doctor    # try it on your machine
 ```
 
-文件结构在 `AGENTS.md`（项目宪法）和 `src/skill_doctor/AGENTS.md`（模块清单）。
+Project layout in `AGENTS.md` (project doctrine) and
+`src/skill_doctor/AGENTS.md` (module map).
+
+License: MIT.

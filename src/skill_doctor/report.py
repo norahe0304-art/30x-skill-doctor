@@ -15,7 +15,7 @@ from collections import Counter
 from rich.console import Console
 from rich.table import Table
 
-from .asm_bridge import QualityRow, asm_version, has_asm
+from .asm_bridge import QualityRow, has_asm
 from .models import (
     RUNTIME_LABEL,
     AnalysisReport,
@@ -103,13 +103,9 @@ def _render_quality(rows: list[QualityRow] | None, c: Console) -> None:
         return
     grades = Counter(r.grade for r in rows)
     summary = " ".join(f"{g}:{n}" for g, n in sorted(grades.items()))
-    version = asm_version() or "asm"
-    c.print(
-        f"[bold cyan]📋 写法质量评估 (附送, 来源: {version} / "
-        f"skill-best-practice@1.1.0)[/bold cyan]"
-    )
-    c.print(f"  {len(rows)} 个 skill 评分   [dim]{summary}[/dim]")
-    c.print("[dim]  最低 5 个 + 修复建议:[/dim]")
+    c.print("[bold cyan]📋 SKILL.md write quality[/bold cyan]")
+    c.print(f"  {len(rows)} skills scored   [dim]{summary}[/dim]")
+    c.print("[dim]  Lowest 5 + suggestions:[/dim]")
     for row in rows[:5]:
         c.print(f"  [cyan]{row.name}[/cyan]  [bold]{row.score}/100  {row.grade}[/bold]")
         for suggestion in row.suggestions[:3]:

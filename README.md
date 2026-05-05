@@ -20,16 +20,16 @@ a fix — interactively, with a backup, and a one-line undo.
 ### 1. Install
 
 ```bash
-pipx install 30x-skill-doctor
+pipx install skill-doctor
 ```
 
 Or with uv:
 
 ```bash
-uv tool install 30x-skill-doctor
+uv tool install skill-doctor
 ```
 
-Plain `pip` works too: `pip install 30x-skill-doctor`.
+Plain `pip` works too: `pip install skill-doctor`.
 
 > Optional: install [`asm`](https://github.com/luongnv89/agent-skill-manager)
 > (`npm install -g agent-skill-manager`) to unlock the SKILL.md write-quality

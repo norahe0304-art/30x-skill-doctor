@@ -1,5 +1,5 @@
 [project]
-name = "30x-skill-doctor"
+name = "skill-doctor"
 version = "0.3.0"
 description = "Cross-runtime AI agent skill housekeeping: spot duplicates, drift, broken symlinks, junk, and stale skills across Claude Code, Codex, Cursor, OpenClaw, and more."
 readme = "README.md"
@@ -44,7 +44,6 @@ Repository = "https://github.com/norahe0304-art/30x-skill-doctor"
 Issues = "https://github.com/norahe0304-art/30x-skill-doctor/issues"
 
 [project.scripts]
-30x-skill-doctor = "skill_doctor.cli:main"
 skill-doctor = "skill_doctor.cli:main"
 
 [dependency-groups]

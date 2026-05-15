@@ -6,7 +6,7 @@ from __future__ import annotations
 def test_package_imports() -> None:
     import skill_doctor
 
-    assert skill_doctor.__version__ == "0.4.1"
+    assert skill_doctor.__version__ == "0.5.0"
 
 
 def test_cli_module_imports() -> None:
@@ -16,9 +16,26 @@ def test_cli_module_imports() -> None:
 
 
 def test_core_modules_present() -> None:
-    from skill_doctor import analyze, apply, asm_bridge, classify, config, models, report, scanner
+    from skill_doctor import (
+        analyze,
+        apply,
+        asm_bridge,
+        classify,
+        clipboard,
+        config,
+        handoff,
+        health,
+        install_skill,
+        models,
+        report,
+        scanner,
+        share,
+    )
 
     assert all(
         m is not None
-        for m in (analyze, apply, asm_bridge, classify, config, models, report, scanner)
+        for m in (
+            analyze, apply, asm_bridge, classify, clipboard, config,
+            handoff, health, install_skill, models, report, scanner, share,
+        )
     )

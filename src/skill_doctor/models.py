@@ -121,6 +121,19 @@ class DupGroup:
     instances: list[SkillInstance]
     master: SkillInstance
 
+    @property
+    def is_aligned(self) -> bool:
+        """Every non-master instance is already a symlink resolving to master.real_path.
+
+        When True, there is nothing for `clean` to do for this group — the
+        runtimes are already pointing at one source of truth.
+        """
+        target = self.master.real_path
+        return all(
+            inst is self.master or (inst.is_symlink and inst.real_path == target)
+            for inst in self.instances
+        )
+
 
 @dataclass
 class DriftGroup:
@@ -166,4 +179,5 @@ class AnalysisReport:
 
     @property
     def has_issues(self) -> bool:
-        return bool(self.duplicates or self.drifts or self.broken_links or self.junk_files)
+        actionable_dups = any(not g.is_aligned for g in self.duplicates)
+        return bool(actionable_dups or self.broken_links or self.junk_files)

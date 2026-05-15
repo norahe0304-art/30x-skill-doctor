@@ -15,12 +15,20 @@ from . import __version__
 from .analyze import analyze
 from .apply import apply_actions, list_backups, undo_last
 from .asm_bridge import QualityRow, asm_version, has_asm, quality_full, quality_sample
+from .clipboard import copy_to_clipboard
 from .config import STALE_DAYS_DEFAULT
+from .health import health_score
 from .i18n import t
+from .install_skill import (
+    SKILL_TARGETS,
+    install_skill_all,
+    install_skill_for,
+)
 from .models import Category, Runtime
 from .report import render_default, render_json
 from .report_full import render_full
 from .scanner import scan_all
+from .share import build_ascii, write_share_card
 
 app = typer.Typer(
     name="skill-doctor",
@@ -193,6 +201,91 @@ def apply_command(
 ) -> None:
     """Renamed to `clean`. Kept as a hidden alias for muscle memory."""
     _clean_impl(yes, master)
+
+
+@app.command("share")
+def share_command(
+    out: str | None = typer.Option(
+        None, "--out", "-o",
+        help="Output path for the SVG card (default: ~/.skill-doctor/share/...)",
+    ),
+    print_card: bool = typer.Option(
+        True, "--print/--no-print",
+        help="Print the ASCII card to terminal for instant screenshot",
+    ),
+) -> None:
+    """Scan and write a shareable health card (SVG + Markdown snippet).
+
+    The SVG is great for tweets and Reddit; the Markdown is auto-copied
+    to clipboard for chat / GitHub issues.
+    """
+    instances, junk, broken = scan_all()
+    report = analyze(instances, junk, broken)
+    breakdown = health_score(report)
+    console = Console()
+
+    if print_card:
+        console.print()
+        console.print(build_ascii(report, breakdown))
+        console.print()
+
+    svg_path = write_share_card(report, breakdown, out_path=out, fmt="svg")
+    md_path = write_share_card(report, breakdown, fmt="md")
+    md_content = md_path.read_text(encoding="utf-8")
+
+    console.print(t("share_intro"))
+    if copy_to_clipboard(md_content):
+        console.print(t("share_paths", svg=svg_path, md=md_path))
+    else:
+        console.print(t("share_paths", svg=svg_path, md=md_path))
+        console.print(t("share_no_clip", md=md_path))
+
+
+@app.command("install-skill")
+def install_skill_command(
+    target: str | None = typer.Option(
+        None, "--target", "-t",
+        help=f"Runtime to install into ({', '.join(SKILL_TARGETS.keys())})."
+             " Omit to auto-detect installed runtimes.",
+    ),
+    all_runtimes: bool = typer.Option(
+        False, "--all",
+        help="Install into every supported runtime even if its directory is missing.",
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f",
+        help="Overwrite an existing SKILL.md if present.",
+    ),
+) -> None:
+    """Register skill-doctor as an AI-agent-invocable skill.
+
+    After install, the Agent will auto-invoke skill-doctor when the user
+    mentions "clean my skills", "duplicate skills", "audit skills", etc.
+    """
+    console = Console()
+    console.print()
+    console.print(t("install_skill_header"))
+
+    if target:
+        results = [install_skill_for(target, force=force)]
+    else:
+        results = install_skill_all(force=force, only_detected=not all_runtimes)
+        if not results:
+            console.print(t("install_skill_none"))
+            return
+
+    for r in results:
+        if r.status == "installed":
+            console.print(t("install_skill_done", label=r.label, dest=r.dest))
+        elif r.status == "overwritten":
+            console.print(t("install_skill_overwrite", label=r.label, dest=r.dest))
+        elif r.status == "skipped_exists":
+            console.print(t("install_skill_skip", label=r.label))
+        elif r.status == "error":
+            console.print(t("install_skill_error", label=r.label, detail=r.detail))
+
+    console.print()
+    console.print(t("install_skill_next"))
 
 
 @app.command("undo")

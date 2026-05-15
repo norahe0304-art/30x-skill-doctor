@@ -15,6 +15,7 @@ from pathlib import Path
 CONFIG_DIR = Path.home() / ".skill-doctor"
 CONFIG_PATH = CONFIG_DIR / "config.toml"
 BACKUP_ROOT = CONFIG_DIR / "backup"
+HANDOFF_ROOT = CONFIG_DIR / "handoff"
 QUALITY_CACHE_PATH = CONFIG_DIR / "quality_cache.json"
 
 DEFAULT_WEIGHTS = {

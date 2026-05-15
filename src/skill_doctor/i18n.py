@@ -64,13 +64,78 @@ _TR: dict[str, dict[str, str]] = {
         "en": "📂 [bold]{n}[/bold] skills across [bold]{m}[/bold] runtimes:",
         "zh": "📂 [bold]{n}[/bold] 个 skill, 跨 [bold]{m}[/bold] 个 runtime:",
     },
+    "health_headline": {
+        "en": "🩺 Health: [bold {color}]{score}/100  {grade}[/bold {color}]",
+        "zh": "🩺 健康分: [bold {color}]{score}/100  {grade}[/bold {color}]",
+    },
+    "health_clean": {
+        "en": "🩺 [bold green]Library is clean — nothing to auto-fix[/bold green]",
+        "zh": "🩺 [bold green]Skill 库很干净 — 没有可自动修的[/bold green]",
+    },
+    "share_intro": {
+        "en": "[bold]Sharing card written:[/bold]",
+        "zh": "[bold]健康卡片已生成:[/bold]",
+    },
+    "share_paths": {
+        "en": "  SVG (drag into Twitter/Reddit): {svg}\n"
+              "  Markdown snippet (copied to clipboard): {md}",
+        "zh": "  SVG（拖到 Twitter/Reddit）: {svg}\n"
+              "  Markdown 片段（已复制到剪贴板）: {md}",
+    },
+    "share_no_clip": {
+        "en": "  Markdown snippet: {md}  [dim](clipboard copy failed; "
+              "paste from the file)[/dim]",
+        "zh": "  Markdown 片段: {md}  [dim]（剪贴板复制失败, 从文件粘贴）[/dim]",
+    },
+    "install_skill_header": {
+        "en": "Installing skill-doctor as a Claude Code skill...",
+        "zh": "把 skill-doctor 注册成 Claude Code skill...",
+    },
+    "install_skill_done": {
+        "en": "  ✓ {label}: {dest}",
+        "zh": "  ✓ {label}: {dest}",
+    },
+    "install_skill_skip": {
+        "en": "  ↷ {label}: already installed (use --force to overwrite)",
+        "zh": "  ↷ {label}: 已安装（加 --force 覆盖）",
+    },
+    "install_skill_overwrite": {
+        "en": "  ↻ {label}: overwritten {dest}",
+        "zh": "  ↻ {label}: 已覆盖 {dest}",
+    },
+    "install_skill_error": {
+        "en": "  ✗ {label}: {detail}",
+        "zh": "  ✗ {label}: {detail}",
+    },
+    "install_skill_none": {
+        "en": "No supported runtime directories detected on this host.\n"
+              "  Try --all to install into every runtime path regardless.",
+        "zh": "未检测到任何支持的 runtime 目录。\n"
+              "  加 --all 把 skill 装到所有 runtime（即使尚未创建）。",
+    },
+    "install_skill_next": {
+        "en": "[dim]Next: in any Agent chat, say things like "
+              "'audit my skills' or 'do I have duplicates?' — "
+              "the Agent will invoke skill-doctor for you.[/dim]",
+        "zh": "[dim]接下来: 在任何 Agent 对话里说 "
+              "「帮我清理 skill」「我是不是装了重复 skill」之类的话, "
+              "Agent 会自动调用 skill-doctor.[/dim]",
+    },
     "categories": {
         "en": "  Categories:",
         "zh": "  用途分类:",
     },
     "header_dup": {
-        "en": "[orange3]🟠 {n} duplicate groups[/orange3] ({i} instances)",
-        "zh": "[orange3]🟠 {n} 组重复[/orange3]（{i} 份）",
+        "en": "[orange3]🟠 {n} duplicate groups still need cleanup[/orange3] "
+              "({i} instances)",
+        "zh": "[orange3]🟠 {n} 组重复待清理[/orange3]（{i} 份）",
+    },
+    "header_dup_aligned": {
+        "en": "[green]✓ {n} duplicate groups already aligned[/green] "
+              "[dim](non-master copies are already symlinks → master · "
+              "no action needed)[/dim]",
+        "zh": "[green]✓ {n} 组已对齐[/green] "
+              "[dim]（副本已是软链指向主源 · 无需处理）[/dim]",
     },
     "header_drift": {
         "en": "[yellow]🟡 {n} drift groups[/yellow] (same name, different content)",
@@ -102,20 +167,46 @@ _TR: dict[str, dict[str, str]] = {
     "no_version": {"en": "no version",           "zh": "无版本"},
     "broken_was": {"en": "→ was:",               "zh": "→ 原指向:"},
     "stale_idle": {"en": "{n} days idle ·",      "zh": "{n} 天没改 ·"},
-    "footer_clean":  {"en": "→ Tidy up: [bold]skill-doctor clean[/bold]",
-                      "zh": "→ 整理: [bold]skill-doctor clean[/bold]"},
-    "footer_ok":     {"en": "[green]✓ Nothing to clean up. Library looks healthy.[/green]",
-                      "zh": "[green]✓ 没有需要整理的, 库很干净。[/green]"},
+    "footer_clean":  {
+        "en": "→ Run [bold]skill-doctor clean[/bold] "
+              "[dim](auto-fixes raw dupes / broken / junk; offers AI handoff "
+              "prompts for drift / stale / quality)[/dim]",
+        "zh": "→ 跑 [bold]skill-doctor clean[/bold] "
+              "[dim]（自动修原始副本 / 断链 / 垃圾；漂移 / 陈旧 / 写法质量"
+              "会让你选择是否生成 AI handoff prompt）[/dim]",
+    },
+    "footer_ok": {
+        "en": "[green]✓ Nothing to auto-fix.[/green] [dim]Drift / stale / "
+              "low-quality items above (if any) need human + AI judgment — "
+              "run [bold]skill-doctor clean[/bold] to get an AI handoff "
+              "prompt for them.[/dim]",
+        "zh": "[green]✓ 没有可自动修的。[/green] [dim]上面如还有漂移 / 陈旧 / "
+              "写法低分, 跑 [bold]skill-doctor clean[/bold] 让它帮你"
+              "生成 AI handoff prompt。[/dim]",
+    },
     "footer_full":   {"en": "[dim]💡 Full per-skill table: skill-doctor --full[/dim]",
                       "zh": "[dim]💡 完整大表: skill-doctor --full[/dim]"},
     "footer_quality": {
-        "en": "[dim]💡 Install the SKILL.md quality evaluator to unlock the "
-              "write-quality dimension.[/dim]",
-        "zh": "[dim]💡 装上 SKILL.md 质量评估器, 解锁写法质量维度.[/dim]",
+        "en": "[dim]💡 Unlock the SKILL.md write-quality dimension: "
+              "[bold]npm install -g agent-skill-manager[/bold][/dim]",
+        "zh": "[dim]💡 解锁 SKILL.md 写法质量维度: "
+              "[bold]npm install -g agent-skill-manager[/bold][/dim]",
     },
     "quality_header": {
         "en": "[bold cyan]📋 SKILL.md write quality[/bold cyan]",
         "zh": "[bold cyan]📋 SKILL.md 写法质量[/bold cyan]",
+    },
+    "quality_locked_header": {
+        "en": "[bold yellow]📋 SKILL.md write quality — locked[/bold yellow] "
+              "[yellow](asm not installed; this is the 7th dimension)[/yellow]",
+        "zh": "[bold yellow]📋 SKILL.md 写法质量 — 未启用[/bold yellow] "
+              "[yellow]（asm 未安装；这是第 7 维度）[/yellow]",
+    },
+    "quality_locked_install": {
+        "en": "  Install once to unlock:  "
+              "[bold]npm install -g agent-skill-manager[/bold]",
+        "zh": "  装一次解锁:  "
+              "[bold]npm install -g agent-skill-manager[/bold]",
     },
     "quality_scored": {
         "en": "  {n} skills scored   [dim]{summary}[/dim]",
@@ -126,6 +217,71 @@ _TR: dict[str, dict[str, str]] = {
         "zh": "[dim]  最低 5 个 + 修复建议（评估器输出英文）:[/dim]",
     },
     "no_actions":   {"en": "✓ Nothing to clean up.",     "zh": "✓ 没有需要整理的。"},
+    "drift_handoff_intro": {
+        "en": "🟡 {n} drift groups remain — Skill Doctor doesn't auto-resolve "
+              "these (intent is unknowable from files alone).",
+        "zh": "🟡 还有 {n} 组 drift — Skill Doctor 不会自动处理它们"
+              "（光看文件分不出是有意分叉还是忘了同步）。",
+    },
+    "drift_handoff_ask": {
+        "en": "  Triage drift with AI? [y/N] ",
+        "zh": "  让 AI 帮你判断保留 / 合并? [y/N] ",
+    },
+    "stale_handoff_intro": {
+        "en": "🕰 {n} stale skills remain — could be obsolete or just stable.",
+        "zh": "🕰 还有 {n} 个 stale skill — 可能没用了, 也可能只是稳定。",
+    },
+    "stale_handoff_ask": {
+        "en": "  Triage stale with AI? [y/N] ",
+        "zh": "  让 AI 帮你判断删 / 留? [y/N] ",
+    },
+    "quality_handoff_intro": {
+        "en": "📋 Low-grade SKILL.md files exist — asm gave generic fixes; "
+              "AI can translate them into concrete edits.",
+        "zh": "📋 有低分 SKILL.md — asm 给了通用建议, AI 可以翻译成具体改写清单。",
+    },
+    "quality_handoff_no_asm": {
+        "en": "📋 SKILL.md write-quality handoff requires `asm` (the SKILL.md "
+              "evaluator).\n"
+              "  Install it once:  npm install -g agent-skill-manager\n"
+              "  Then rerun `skill-doctor clean` and pick this option to "
+              "generate an AI fix-it prompt for low-grade skills.",
+        "zh": "📋 SKILL.md 写法质量 handoff 需要 `asm` (SKILL.md 评估器)。\n"
+              "  装一次:  npm install -g agent-skill-manager\n"
+              "  装好后再跑 `skill-doctor clean`, 选这一项就能给低分 skill "
+              "生成 AI 修法 prompt。",
+    },
+    "quality_handoff_ask": {
+        "en": "  Triage quality fixes with AI? (runs asm — warm cache is fast) [y/N] ",
+        "zh": "  让 AI 帮你给具体修法? (会跑一遍 asm, cache 暖很快) [y/N] ",
+    },
+    "quality_handoff_empty": {
+        "en": "  asm returned no rows. Skipping.",
+        "zh": "  asm 没返回数据, 已跳过。",
+    },
+    "quality_handoff_none_low": {
+        "en": "  ✓ No D/F-grade skills. Quality is healthy.",
+        "zh": "  ✓ 没有 D/F 等级的 skill. 写法质量没事。",
+    },
+    "handoff_skipped": {
+        "en": "  Skipped.",
+        "zh": "  已跳过。",
+    },
+    "handoff_clipboard": {
+        "en": "  ✓ Prompt copied to clipboard.\n"
+              "    Paste into Claude.ai / Cursor → follow the AI's table.\n"
+              "    (Backup at {path})",
+        "zh": "  ✓ Prompt 已复制到剪贴板。\n"
+              "    粘到 Claude.ai / Cursor → 看 AI 给的 table。\n"
+              "    (备份在 {path})",
+    },
+    "handoff_written": {
+        "en": "  ✓ Wrote prompt to: {path}\n"
+              "    Paste its content into Claude.ai / Cursor → "
+              "follow the AI's table.",
+        "zh": "  ✓ Prompt 已写入: {path}\n"
+              "    把内容粘到 Claude.ai / Cursor → 看 AI 给的 table。",
+    },
     "actions_queued": {
         "en": "{n} actions queued. Backup dir: {dir}",
         "zh": "{n} 个动作待执行. 备份目录: {dir}",
@@ -140,8 +296,8 @@ _TR: dict[str, dict[str, str]] = {
               "\n撤销: skill-doctor undo",
     },
     "apply_prompt": {
-        "en": "  Apply? [y/N/q/a (a = yes-to-all-of-this-type)] ",
-        "zh": "  执行? [y/N/q/a (a = 同类型批量同意)] ",
+        "en": "  Apply? [y = yes / N = no (default) / a = yes to all of this type / q = quit] ",
+        "zh": "  执行? [y = 是 / N = 否（默认）/ a = 同类型全部同意 / q = 退出] ",
     },
     "act_dedup_title":  {"en": "Merge {name} ({rt})",     "zh": "合并 {name}（{rt}）"},
     "act_dedup_detail": {"en": "{src} → symlink to {dst}", "zh": "{src} → 软链到 {dst}"},
@@ -163,14 +319,28 @@ _TR: dict[str, dict[str, str]] = {
         "zh": "可恢复：skill-doctor undo 一行还原以上所有变更。",
     },
     "rat_codex_warn": {
-        "en": "Note: Codex Desktop App skips SKILL.md when SKILL.md itself is "
-              "a symlink (#17344). Codex CLI ≤ 0.98 silently fails on broken "
-              "symlinks during skill discovery (#11314). Valid directory "
-              "symlinks (what we create) work in current Codex CLI; we still "
-              "flag this so you know.",
-        "zh": "提示：Codex 桌面 App 当 SKILL.md 本身是软链时会跳过 (#17344)；"
-              "Codex CLI ≤ 0.98 在遇到坏软链时静默失败 (#11314). 我们生成的是"
-              "目录级有效软链, 当前 Codex CLI 能识别, 仅此告知你这个生态局限。",
+        "en": "Note: OpenAI closed Codex's file-level SKILL.md symlink support "
+              "as not-planned (#15756, with #17344 as duplicate); they also "
+              "closed CLI ≤ 0.98's bug where ~/.codex/skills being a symlink "
+              "hides discovery entirely (#11314). skill-doctor creates "
+              "directory-level symlinks at ~/.codex/skills/<skill>/, which "
+              "sidesteps both — current Codex CLI handles these fine.",
+        "zh": "提示：OpenAI 已把 Codex 文件级 SKILL.md 软链支持 closed as "
+              "not-planned (#15756, #17344 是其 duplicate)；CLI ≤ 0.98 上 "
+              "~/.codex/skills 本身是软链时整个发现失败 (#11314, 同样 closed). "
+              "skill-doctor 创建的是目录级软链 ~/.codex/skills/<skill>/，"
+              "刚好绕开以上两个 bug，当前 Codex CLI 能正常识别。",
+    },
+    "rat_cursor_warn": {
+        "en": "Note: Cursor is known to not reliably follow directory symlinks "
+              "for skills (see skills-hub README, which forces copy on Cursor "
+              "targets). The link will be created, but Cursor may ignore it. "
+              "If skills don't appear in Cursor, run `cp -R` from the master "
+              "instead, or use --exclude cursor to skip this target.",
+        "zh": "提示：Cursor 已知不可靠 follow skills 目录软链（参考 skills-hub "
+              "README 对 Cursor target 强制 copy 的做法）。软链会被创建，"
+              "但 Cursor 可能识别不出来。如果发现 skill 没在 Cursor 里出现，"
+              "改用 cp -R 从 master 复制过去；或加 --exclude cursor 跳过该 target。",
     },
     "rat_junk_pattern": {
         "en": "Pattern '{pattern}' matched — see methodology in skill-doctor README.",

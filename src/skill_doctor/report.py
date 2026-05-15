@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .asm_bridge import QualityRow, has_asm
+from .health import HealthBreakdown, health_score
 from .i18n import category_label, t
 from .models import (
     RUNTIME_LABEL,
@@ -25,6 +26,29 @@ from .models import (
 )
 
 _console = Console()
+
+
+# ─── health headline (the wow-stat the user sees first) ──────────────────────
+def _health_color(breakdown: HealthBreakdown) -> str:
+    if breakdown.score >= 85:
+        return "green"
+    if breakdown.score >= 65:
+        return "yellow"
+    return "red"
+
+
+def _render_health_headline(report: AnalysisReport, c: Console) -> None:
+    breakdown = health_score(report)
+    if not breakdown.has_findings and breakdown.score >= 95:
+        c.print(t("health_clean"))
+    else:
+        c.print(t(
+            "health_headline",
+            color=_health_color(breakdown),
+            score=breakdown.score,
+            grade=breakdown.grade,
+        ))
+    c.print()
 
 
 # ─── default view ────────────────────────────────────────────────────────────
@@ -36,6 +60,7 @@ def render_default(
 ) -> None:
     c = console or _console
     c.print()
+    _render_health_headline(report, c)
     c.print(t("skills_across_runtimes", n=report.total_skills, m=report.total_runtimes))
     c.print()
 
@@ -69,10 +94,19 @@ def _render_categories(report: AnalysisReport, c: Console) -> None:
 def _render_issues(report: AnalysisReport, c: Console, show_all: bool = False) -> None:
     has_any = False
     if report.duplicates:
-        instances = sum(len(g.instances) for g in report.duplicates)
-        c.print(t("header_dup", n=len(report.duplicates), i=instances))
-        _render_dup_list(report, c, show_all)
-        has_any = True
+        pending = [g for g in report.duplicates if not g.is_aligned]
+        aligned = [g for g in report.duplicates if g.is_aligned]
+        if pending:
+            instances = sum(len(g.instances) for g in pending)
+            c.print(t("header_dup", n=len(pending), i=instances))
+            _render_dup_list(pending, c, show_all, is_aligned_section=False)
+            has_any = True
+        if aligned:
+            c.print(t("header_dup_aligned", n=len(aligned)))
+            if show_all:
+                _render_dup_list(aligned, c, show_all=True, is_aligned_section=True)
+            else:
+                c.print()
     if report.drifts:
         c.print(t("header_drift", n=len(report.drifts)))
         _render_drift_list(report, c, show_all)
@@ -111,28 +145,40 @@ def _list_tail(shown: int, total: int, method_lines: list[str], c: Console) -> N
     c.print()
 
 
-def _render_dup_list(report: AnalysisReport, c: Console, show_all: bool) -> None:
-    limit = len(report.duplicates) if show_all else DEFAULT_LIMIT
-    for g in report.duplicates[:limit]:
+def _render_dup_list(
+    groups: list, c: Console, show_all: bool, is_aligned_section: bool = False
+) -> None:
+    limit = len(groups) if show_all else DEFAULT_LIMIT
+    master_target = None
+    for g in groups[:limit]:
         name = g.instances[0].dir_name
         c.print(f"  [bold]{name}[/bold]  [dim]{t('dup_copies', n=len(g.instances))}[/dim]")
         c.print(
             f"    [orange3]{t('dup_master')}[/orange3] [dim]{_short(g.master.path)}[/dim]"
         )
+        master_target = g.master.real_path
         for inst in g.instances:
             if inst is g.master:
                 continue
-            c.print(f"    [dim]{t('dup_copy')}[/dim]   [dim]{_short(inst.path)}[/dim]")
-    _list_tail(
-        limit, len(report.duplicates),
-        [
+            tag = (
+                "[green]linked[/green]"
+                if inst.is_symlink and inst.real_path == master_target
+                else "[orange3]raw   [/orange3]"
+            )
+            c.print(f"    [dim]{t('dup_copy')}[/dim] {tag} [dim]{_short(inst.path)}[/dim]")
+    method_lines = (
+        []
+        if is_aligned_section
+        else [
             "Detection: same dir_name + SHA-256(normalized SKILL.md body) match",
             "Master election: version 40% · inbound symlinks 40% · mtime 20% "
             "(when no version present, weight redistributes to inbound + mtime)",
+            "Aligned vs pending: 'linked' = already a symlink → master "
+            "(no action); 'raw' = independent copy (clean replaces with symlink)",
             "Provenance: NIST FIPS 180-4 (SHA-256) · git content-addressable model",
-        ],
-        c,
+        ]
     )
+    _list_tail(limit, len(groups), method_lines, c)
 
 
 def _render_drift_list(report: AnalysisReport, c: Console, show_all: bool) -> None:
@@ -207,6 +253,14 @@ def _render_stale_list(report: AnalysisReport, c: Console, show_all: bool) -> No
 
 
 def _render_quality(rows: list[QualityRow] | None, c: Console) -> None:
+    """Render the quality dimension. When asm is missing, show a locked-state
+    placeholder instead of staying silent — quality is one of the 7 dimensions
+    and a missing evaluator should be visible, not invisible."""
+    if not has_asm():
+        c.print(t("quality_locked_header"))
+        c.print(t("quality_locked_install"))
+        c.print()
+        return
     if rows is None or not rows:
         return
     grades = Counter(r.grade for r in rows)
@@ -224,8 +278,6 @@ def _render_quality(rows: list[QualityRow] | None, c: Console) -> None:
 def _render_footer(report: AnalysisReport, c: Console) -> None:
     c.print(t("footer_clean") if report.has_issues else t("footer_ok"))
     c.print(t("footer_full"))
-    if not has_asm():
-        c.print(t("footer_quality"))
     c.print()
 
 

@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .apply_ops import execute, undo_op
+from .clipboard import copy_to_clipboard
 from .config import BACKUP_ROOT, ensure_config_dir
 from .i18n import t
 from .models import Action, ActionType, AnalysisReport, FsOp
@@ -184,6 +185,7 @@ def apply_actions(
     summary = ApplySummary()
     if not actions:
         print(t("no_actions"))
+        _maybe_offer_handoffs(report, interactive)
         return summary
 
     ensure_config_dir()
@@ -204,16 +206,21 @@ def apply_actions(
         for line in action.rationale:
             print(f"  {line}" if line and not line.startswith(" ") else line)
         has_symlink = False
+        has_cursor_target = False
         for op in action.ops:
             if op.kind == "move_to_backup":
                 print(f"    backup  {_short(op.src)}  →  {_short(backup_dir)}/")
             elif op.kind == "symlink" and op.dst is not None:
                 print(f"    symlink {_short(op.dst)}  →  {_short(op.src)}")
                 has_symlink = True
+                if ".cursor" in op.dst.parts:
+                    has_cursor_target = True
             elif op.kind == "remove_symlink":
                 print(f"    unlink  {_short(op.src)}")
         if has_symlink:
             print(f"  {t('rat_codex_warn')}")
+        if has_cursor_target:
+            print(f"  {t('rat_cursor_warn')}")
         print(f"  {t('rat_reversible')}")
         choice = "y" if (not interactive or action.type in auto_yes_for) else _ask_choice()
 
@@ -253,7 +260,97 @@ def apply_actions(
             failed=summary.failed,
         )
     )
+    _maybe_offer_handoffs(report, interactive)
     return summary
+
+
+def _maybe_offer_handoffs(report: AnalysisReport, interactive: bool) -> None:
+    """Offer AI handoff prompts for drift / stale / quality, one at a time.
+
+    Handoffs require an explicit user yes — `--yes` (non-interactive) skips
+    them entirely, since handoff is fundamentally a user-driven choice
+    (which AI to use, when to act on its recommendations) that can't be
+    safely automated.
+    """
+    if not interactive:
+        return
+    _ask_drift_handoff(report)
+    _ask_stale_handoff(report)
+    _ask_quality_handoff(report)
+
+
+def _ask_drift_handoff(report: AnalysisReport) -> None:
+    if not report.drifts:
+        return
+    print()
+    print(t("drift_handoff_intro", n=len(report.drifts)))
+    if not _yes_no(t("drift_handoff_ask")):
+        print(t("handoff_skipped"))
+        return
+    from .handoff import write_drift_handoff
+    out_path = write_drift_handoff(report)
+    _emit_handoff_result(out_path)
+
+
+def _ask_stale_handoff(report: AnalysisReport) -> None:
+    if not report.stale:
+        return
+    print()
+    print(t("stale_handoff_intro", n=len(report.stale)))
+    if not _yes_no(t("stale_handoff_ask")):
+        print(t("handoff_skipped"))
+        return
+    from .handoff import write_stale_handoff
+    out_path = write_stale_handoff(report)
+    _emit_handoff_result(out_path)
+
+
+def _ask_quality_handoff(report: AnalysisReport) -> None:
+    """Quality is lazy: ask first, then run asm (uses mtime cache so warm cache is fast).
+
+    When asm is not installed, surface install instructions instead of silently
+    skipping — quality is the third pillar of the handoff feature and a missing
+    evaluator should be visible, not invisible.
+    """
+    from .asm_bridge import has_asm, quality_full
+    print()
+    if not has_asm():
+        print(t("quality_handoff_no_asm"))
+        return
+    print(t("quality_handoff_intro"))
+    if not _yes_no(t("quality_handoff_ask")):
+        print(t("handoff_skipped"))
+        return
+    paths = [inst.path for inst in report.instances]
+    rows = quality_full(paths)
+    if not rows:
+        print(t("quality_handoff_empty"))
+        return
+    low_grade = [r for r in rows if r.grade in {"D", "F"}]
+    if not low_grade:
+        print(t("quality_handoff_none_low"))
+        return
+    from .handoff import write_quality_handoff
+    out_path = write_quality_handoff(low_grade)
+    _emit_handoff_result(out_path)
+
+
+def _yes_no(prompt_text: str) -> bool:
+    sys.stdout.write(prompt_text)
+    sys.stdout.flush()
+    try:
+        raw = (sys.stdin.readline() or "").strip().lower()
+    except KeyboardInterrupt:
+        return False
+    return raw in {"y", "yes"}
+
+
+def _emit_handoff_result(out_path: Path) -> None:
+    content = out_path.read_text(encoding="utf-8")
+    if copy_to_clipboard(content):
+        print(t("handoff_clipboard", path=_short(out_path)))
+    else:
+        print(t("handoff_written", path=_short(out_path)))
 
 
 def _ask_choice() -> str:

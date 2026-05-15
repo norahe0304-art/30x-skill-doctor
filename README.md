@@ -35,6 +35,19 @@ Plain `pip` works too: `pip install skill-doctor`.
 > (`npm install -g agent-skill-manager`) to unlock the SKILL.md write-quality
 > dimension. Everything else works without it.
 
+#### Want the Agent to call it for you?
+
+Run once:
+
+```bash
+skill-doctor install-skill
+```
+
+This registers `skill-doctor` as a Claude Code / Codex / Cursor / OpenClaw
+skill. After that, when you say things like *"audit my skills"* or *"do I
+have duplicate skills"* in any Agent chat, the Agent will invoke
+`skill-doctor` automatically — no need to remember the CLI.
+
 ### 2. See what you have
 
 ```bash
@@ -44,6 +57,8 @@ skill-doctor
 You'll get a one-screen report like this:
 
 ```
+🩺 Health: 73/100  C+
+
 📂 You have 453 skills across 8 runtimes:
 
     Claude Code        154
@@ -98,6 +113,41 @@ skill-doctor undo
 ```
 
 Need to recover an older one? `skill-doctor undo --pick`.
+
+---
+
+## Share your library's health
+
+```bash
+skill-doctor share
+```
+
+Generates a self-contained SVG you can drop into Twitter / Reddit /
+GitHub Issues, plus an ASCII version for screenshots and a Markdown
+snippet (auto-copied to your clipboard for chat windows).
+
+```
+╭──────────────────────────────────────────────╮
+│  🩺  SKILL LIBRARY HEALTH                    │
+├──────────────────────────────────────────────┤
+│    87 / 100      Grade: B+                   │
+│   453 skills · 8 runtimes                    │
+├──────────────────────────────────────────────┤
+│  Top runtimes:                               │
+│  Claude Code          154                    │
+│  OpenClaw             151                    │
+│  Plugin (Claude)       48                    │
+├──────────────────────────────────────────────┤
+│  Findings:                                   │
+│  duplicates  🟠 5                            │
+│  drift       🟡 3                            │
+╰──────────────────────────────────────────────╯
+```
+
+The health score is a transparent 0–100 subtractive model — every penalty
+is listed in [`src/skill_doctor/health.py`](src/skill_doctor/health.py)
+and the score appears in the `--json` output too if you want to track it
+over time in CI.
 
 ---
 
@@ -321,9 +371,109 @@ library takes ≈ 40 s, subsequent runs ≈ 0.4 s with no edits.
 defines the rule set (frontmatter required fields, body length, description
 format, naming conventions, progressive-disclosure structure).
 
-**Failure modes.** Quality scoring is opt-in: requires the underlying
-evaluator to be available on `PATH`. When unavailable, the dimension is
-silently elided and the remaining six dimensions function unchanged.
+**Failure modes.** Quality scoring requires the underlying evaluator to be
+available on `PATH`. When `asm` is not installed, the dimension renders a
+visible **locked** placeholder with the install command —
+`npm install -g agent-skill-manager` — rather than disappearing silently;
+the other six dimensions function unchanged.
+
+---
+
+## AI handoff for the human-judgment dimensions
+
+Three of the seven dimensions — **drift**, **stale**, and **quality** —
+require a judgment Skill Doctor refuses to make automatically: drift could
+be deliberate per-runtime tuning, stale could be stable rather than dead,
+quality fixes are skill-specific authoring decisions. Instead of forcing
+you to read N×2 SKILL.md files yourself, `clean` offers to generate an
+**AI handoff prompt** for each dimension that has unresolved items.
+
+```
+$ skill-doctor clean
+[ ...auto-fix dedup / broken / junk... ]
+
+🟡 38 drift groups remain — Skill Doctor doesn't auto-resolve these.
+  Triage drift with AI? [y/N] y
+  ✓ Prompt copied to clipboard.
+    Paste into Claude.ai / Cursor → follow the AI's table.
+    (Backup at ~/.skill-doctor/handoff/drift-20260506-145701.md)
+
+🕰 3 stale skills remain — could be obsolete or just stable.
+  Triage stale with AI? [y/N] y
+  ✓ Prompt copied to clipboard.
+
+📋 Low-grade SKILL.md files exist — asm gave generic fixes; AI can
+   translate them into concrete edits.
+  Triage quality fixes with AI? [y/N] n  Skipped.
+```
+
+**What's in the prompt.** Each handoff is a self-contained markdown file
+designed for the AI to consume, not for you to read:
+
+| Handoff | Embeds | Asks AI to return |
+|---|---|---|
+| **drift** | unified diff (capped at 50 lines per pair) | `merge_to_<runtime>` / `keep_divergent` / `needs_more_context` + exact `cp -R` command |
+| **stale** | frontmatter + first 60 lines of SKILL.md | `likely_obsolete` / `still_useful` / `uncertain` + `rm -rf` command (only if high-confidence obsolete) |
+| **quality** | asm's flagged issues + first 60 lines of SKILL.md | A 3-bullet punch list of skill-specific edits — you apply by hand |
+
+Total prompt size for a typical 38-drift / 3-stale / 10-quality run is
+~20 KB combined, well within Claude.ai or Cursor's working context.
+
+**Workflow.** Paste prompt → AI returns a recommendation table → you copy
+the commands you accept and run them in your terminal → rerun
+`skill-doctor clean` to verify the count drops.
+
+**Skill Doctor never edits these files itself.** The handoff is a
+translation layer: it converts "you have 38 things to manually compare"
+into "you have a 38-row table to skim", but every actual file change
+remains a deliberate human action. This is consistent with the
+*"not a sync engine"* non-goal below.
+
+The handoff prompt is auto-copied to the system clipboard
+(`pbcopy` / `wl-copy` / `xclip` / `xsel` / `clip`) and saved to
+`~/.skill-doctor/handoff/<dimension>-<timestamp>.md` as backup.
+
+---
+
+## Why directory-level symlinks
+
+When `clean` resolves a duplicate group, it keeps one master and replaces
+the rest with **directory-level symlinks** — i.e. `~/.codex/skills/foo`
+becomes a symlink to `~/.openclaw/skills/foo` as a whole, never to
+`SKILL.md` inside it.
+
+This is a deliberate choice, not a coincidence. Three properties:
+
+1. **Drift cannot accumulate.** One source of truth, N pointers. Editing
+   the master is instantly visible to every runtime. A copy-mode equivalent
+   would require a sync engine, which Skill Doctor explicitly is not (see
+   Out of scope below).
+
+2. **It matches every comparable tool's default.** [skillshare](https://github.com/runkids/skillshare),
+   [skills-hub](https://github.com/qufei1993/skills-hub), [skills-supply](https://github.com/803/skills-supply),
+   and the SSW skill-sharing rule all default to symlinks; copy is a
+   fallback for the runtimes that refuse them.
+
+3. **It sidesteps the Codex bugs OpenAI marked not-planned.**
+   [#15756](https://github.com/openai/codex/issues/15756) (with [#17344](https://github.com/openai/codex/issues/17344)
+   as duplicate) closed *file-level* SKILL.md symlink support; [#11314](https://github.com/openai/codex/issues/11314)
+   closed the case where `~/.codex/skills` itself is a symlink. Both are
+   permanently unresolved. By symlinking at the directory level — at
+   `~/.codex/skills/<skill>/`, neither *file-level* nor *the skills root* —
+   Skill Doctor lands in the slice Codex CLI still handles.
+
+### Known edges
+
+- **Cursor**: Cursor is observed to not reliably follow directory symlinks
+  for skills. skills-hub's README explicitly documents forcing copy on
+  Cursor targets for this reason. When `clean` would symlink into a Cursor
+  path, it prints a warning and suggests `cp -R` from the master, or
+  `--exclude cursor` to skip that target. The default behaviour does not
+  change for the other six runtimes.
+- **Whole-home sync across machines**: If you sync `~/` across machines and
+  the symlink target lives outside that sync set, the link will be dead on
+  the receiving machine. Either keep the master inside the synced tree, or
+  use a per-runtime copy strategy outside Skill Doctor.
 
 ---
 
@@ -331,6 +481,17 @@ silently elided and the remaining six dimensions function unchanged.
 
 Skill Doctor explicitly does **not**:
 
+- **Act as a sync engine.** It de-duplicates by symlink, not by maintaining
+  N independent copies in lockstep. If you need true per-runtime copies
+  with scheduled sync, use [skillshare](https://github.com/runkids/skillshare)
+  or similar.
+- **Fan a skill out to runtimes that don't have it.** If a skill exists
+  only under `~/.codex/skills/` and you want it to also appear under
+  `~/.claude/skills/`, that's a one-line `ln -s` you do by hand. Skill
+  Doctor will pick the new symlink up on the next scan and treat it as a
+  resolved duplicate. We deliberately don't ship a fan-out command — every
+  variant (which runtimes, copy or link, propagate updates or not) is a
+  policy decision that belongs to the user, not the tool.
 - **Measure invocation frequency.** Runtimes do not expose skill-level
   telemetry; modification time is not a substitute.
 - **Score overall "skill quality"** beyond the SKILL.md hygiene captured
@@ -346,7 +507,7 @@ Skill Doctor explicitly does **not**:
 ## Common flags
 
 ```bash
-skill-doctor                       # default report
+skill-doctor                       # default report (with health score)
 skill-doctor --full                # one row per skill
 skill-doctor --full --no-truncate  # don't shorten long paths
 skill-doctor --version             # version info
@@ -355,6 +516,11 @@ skill-doctor --category seo        # filter by category
 skill-doctor --json                # machine-readable
 skill-doctor --stale-days 90       # change stale threshold
 skill-doctor --quality-n 10        # quick uncached quality sample
+skill-doctor share                 # write shareable SVG + ASCII + Markdown card
+skill-doctor share --no-print      # don't echo the ASCII version
+skill-doctor install-skill         # register as an Agent-invocable skill
+skill-doctor install-skill --all   # install into every supported runtime
+skill-doctor install-skill --force # overwrite an existing SKILL.md
 skill-doctor clean                 # interactive tidy
 skill-doctor clean --yes           # non-interactive (3-second cancel)
 skill-doctor undo                  # roll back last apply

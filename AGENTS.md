@@ -5,8 +5,9 @@ Python 3.12+ + Typer + Rich + Pydantic + PyYAML + rapidfuzz + questionary。
 <directory>
 src/ - 包源码 (1 子目录: skill_doctor)
 tests/ - fixture 驱动的行为测试 (1 子目录: legacy)
-research/ - 产品与市场调研笔记 + 终版计划
 </directory>
+
+法则: research/ 与 marketing/ 为内部调研与素材，已移出公开仓库(仍在 git 历史中)，不在此地图追踪
 
 <config>
 pyproject.toml - 包元数据 / CLI 入口 / 依赖 / pytest 与 ruff 配置

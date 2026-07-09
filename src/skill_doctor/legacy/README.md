@@ -9,4 +9,6 @@ by the new code path.
 The `runtime_registry.py` was kept at the package root because its runtime path
 whitelist remains directly reusable.
 
-See `research/SKILL_DOCTOR_FINAL_PLAN.md` for the redesign rationale.
+The redesign rationale lived in `research/SKILL_DOCTOR_FINAL_PLAN.md`, an
+internal planning doc no longer kept in the public repo (still available in
+git history).

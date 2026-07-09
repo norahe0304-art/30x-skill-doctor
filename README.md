@@ -575,11 +575,13 @@ dimensions don't depend on it.
 
 ## Developer quick-start
 
+Requires Python >= 3.12.
+
 ```bash
 git clone https://github.com/norahe0304-art/30x-skill-doctor.git
 cd 30x-skill-doctor
 uv sync
-uv run --no-editable pytest          # 32 tests
+uv run --no-editable pytest          # 64 tests
 uv run --no-editable ruff check .
 uv run --no-editable skill-doctor    # try it on your machine
 ```
